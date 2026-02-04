@@ -1,3 +1,15 @@
+// ============================================
+// CONFIGURACIÓN
+// ============================================
+const CONFIG = {
+    // URL que aparece en el pie de página al imprimir
+    footerUrl: 'https://aramcap.github.io/colorcal/'
+};
+
+// ============================================
+// FUNCIONES DE UTILIDAD
+// ============================================
+
 // Función para calcular luminosidad de un color y determinar si el texto debe ser claro u oscuro
 function getContrastColor(hexColor) {
     if (!hexColor) return '#555';
@@ -106,6 +118,60 @@ function setupEventListeners() {
         }
     });
     
+    // Validación del campo "meses a mostrar"
+    const monthsCountInput = document.getElementById('monthsCount');
+    monthsCountInput.addEventListener('input', function() {
+        // Eliminar caracteres no numéricos
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        let value = parseInt(this.value);
+        if (isNaN(value) || value < 1) {
+            this.value = 1;
+        } else if (value > 36) {
+            this.value = 36;
+        }
+    });
+    
+    monthsCountInput.addEventListener('blur', function() {
+        // Asegurar valor válido al perder foco
+        let value = parseInt(this.value);
+        if (isNaN(value) || value < 1) {
+            this.value = 1;
+        } else if (value > 36) {
+            this.value = 36;
+        }
+    });
+    
+    // Validación del campo "fecha inicio" del período
+    const startMonthInput = document.getElementById('startMonth');
+    startMonthInput.addEventListener('change', function() {
+        if (this.value) {
+            // Validar formato YYYY-MM
+            const regex = /^\d{4}-(0[1-9]|1[0-2])$/;
+            if (!regex.test(this.value)) {
+                alert('Formato de fecha no válido. Use el selector de mes.');
+                const today = new Date();
+                this.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+                return;
+            }
+            const [year] = this.value.split('-').map(Number);
+            if (year < 1900 || year > 2100) {
+                alert('El año debe estar entre 1900 y 2100');
+                const today = new Date();
+                this.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            }
+        }
+    });
+    
+    // Validación adicional al escribir en el campo de mes (prevenir entrada manual inválida)
+    startMonthInput.addEventListener('input', function() {
+        // Si el valor no está vacío y no coincide con el patrón parcial, limpiar
+        if (this.value && !/^\d{0,4}(-\d{0,2})?$/.test(this.value)) {
+            const today = new Date();
+            this.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        }
+    });
+    
     // Generar leyenda antes de imprimir
     window.addEventListener('beforeprint', generatePrintLegend);
 }
@@ -117,11 +183,13 @@ function generatePrintLegend() {
     
     // Añadir etiquetas usadas
     state.tags.forEach(tag => {
+        const dayCount = countDaysForTag(tag.id);
+        const dayText = dayCount === 1 ? '1 día' : `${dayCount} días`;
         const item = document.createElement('div');
         item.className = 'legend-item';
         item.innerHTML = `
             <span class="legend-color" style="background-color: ${tag.color};"></span>
-            <span class="legend-name">${tag.name}</span>
+            <span class="legend-name">${tag.name} (${dayText})</span>
         `;
         legendContent.appendChild(item);
     });
@@ -136,6 +204,25 @@ function generatePrintLegend() {
         `;
         legendContent.appendChild(weekendItem);
     }
+    
+    // Actualizar pie de página con la URL configurada
+    const footerLink = document.getElementById('footerLink');
+    if (footerLink) {
+        footerLink.href = CONFIG.footerUrl;
+        footerLink.textContent = CONFIG.footerUrl;
+    }
+}
+
+// Contar días marcados para una etiqueta específica
+function countDaysForTag(tagId) {
+    let count = 0;
+    Object.values(state.markedDays).forEach(tags => {
+        const tagArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+        if (tagArray.some(t => t.tagId === tagId)) {
+            count++;
+        }
+    });
+    return count;
 }
 
 // Gestión de etiquetas
@@ -199,18 +286,23 @@ function renderTagsList() {
         return;
     }
     
-    container.innerHTML = state.tags.map(tag => `
+    container.innerHTML = state.tags.map(tag => {
+        const dayCount = countDaysForTag(tag.id);
+        const dayText = dayCount === 1 ? '1 día' : `${dayCount} días`;
+        return `
         <div class="tag-item">
             <div class="tag-info">
                 <div class="tag-color-box" style="background: ${tag.color};"></div>
                 <span class="tag-name">${tag.name}</span>
+                <span class="tag-day-count">(${dayText})</span>
             </div>
             <div class="tag-actions">
                 <button class="tag-edit" onclick="editTag('${tag.id}')" title="Editar etiqueta" aria-label="Editar">✏️</button>
                 <button class="tag-delete" onclick="deleteTag('${tag.id}')" aria-label="Eliminar">🗑️</button>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function renderTagsSelect() {
@@ -299,21 +391,37 @@ function clearSelection() {
     saveToLocalStorage();
 }
 
+// Validar formato de mes (YYYY-MM)
+function isValidMonthFormat(value) {
+    if (!value || typeof value !== 'string') return false;
+    const regex = /^\d{4}-(0[1-9]|1[0-2])$/;
+    if (!regex.test(value)) return false;
+    const [year] = value.split('-').map(Number);
+    return year >= 1900 && year <= 2100;
+}
+
 // Actualizar período
 function updatePeriod() {
     const startMonthInput = document.getElementById('startMonth');
     const monthsCountInput = document.getElementById('monthsCount');
     
-    state.startMonth = startMonthInput.value;
-    state.monthsCount = parseInt(monthsCountInput.value);
+    const monthValue = startMonthInput.value;
     
-    if (!state.startMonth) {
-        alert('Por favor, selecciona un mes de inicio');
+    if (!monthValue || !isValidMonthFormat(monthValue)) {
+        alert('Por favor, selecciona un mes de inicio válido (formato: AAAA-MM)');
+        // Restablecer al mes actual si el valor no es válido
+        const today = new Date();
+        startMonthInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
         return;
     }
     
-    if (state.monthsCount < 1 || state.monthsCount > 36) {
+    state.startMonth = monthValue;
+    state.monthsCount = parseInt(monthsCountInput.value);
+    
+    if (isNaN(state.monthsCount) || state.monthsCount < 1 || state.monthsCount > 36) {
         alert('El número de meses debe estar entre 1 y 36');
+        monthsCountInput.value = 12;
+        state.monthsCount = 12;
         return;
     }
     

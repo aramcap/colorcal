@@ -181,6 +181,12 @@ button {
     font-size: 14px;
 }
 
+.tag-day-count {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-left: 5px;
+}
+
 .tag-delete {
     background: #e74c3c;
     color: white;
@@ -506,4 +512,25 @@ button {
         flex-wrap: wrap;
         gap: 10px;
     }
+    
+    .print-footer {
+        display: block !important;
+        margin-top: 30px;
+        padding-top: 15px;
+        border-top: 1px solid #ccc;
+        text-align: center;
+        font-size: 16px;
+        color: #666;
+        page-break-inside: avoid;
+    }
+    
+    .print-footer a {
+        color: #3498db;
+        text-decoration: none;
+    }
+}
+
+/* Ocultar pie de página en pantalla */
+.print-footer {
+    display: none;
 }

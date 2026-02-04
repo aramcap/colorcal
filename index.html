@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendario Fácil</title>
+    <title>Colorcal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
@@ -17,10 +17,10 @@
             <div class="section">
                 <h3>Período</h3>
                 <label>Fecha inicio:</label>
-                <input type="month" id="startMonth" />
+                <input type="month" id="startMonth" min="1900-01" max="2100-12" required />
                 
                 <label>Meses a mostrar:</label>
-                <input type="number" id="monthsCount" min="1" max="36" value="12" />
+                <input type="number" id="monthsCount" min="1" max="36" value="12" step="1" required />
                 
                 <button id="updatePeriod" class="btn-primary">Actualizar Calendario</button>
             </div>
@@ -92,6 +92,11 @@
         <div id="printLegend" class="print-legend">
             <h3>Leyenda</h3>
             <div id="legendContent"></div>
+        </div>
+        
+        <!-- Pie de página para impresión -->
+        <div id="printFooter" class="print-footer">
+            <span>Generado con <a id="footerLink" href=""></a></span>
         </div>
     </div>
     
