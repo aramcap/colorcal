@@ -7,12 +7,79 @@ const CONFIG = {
 };
 
 // ============================================
+// FUNCIONES DE TEMA
+// ============================================
+
+// Aplicar tema según preferencia
+function applyTheme(theme) {
+    if (theme === 'system') {
+        // Usar preferencia del sistema
+        document.documentElement.removeAttribute('data-theme');
+    } else {
+        // Forzar tema claro u oscuro
+        document.documentElement.setAttribute('data-theme', theme);
+    }
+    
+    // Guardar preferencia
+    localStorage.setItem('colorcal-theme', theme);
+    
+    // Actualizar selector
+    const selector = document.getElementById('themeSelector');
+    if (selector) {
+        selector.value = theme;
+    }
+    
+    // Re-renderizar calendario si existe
+    if (state.chart) {
+        // Pequeño delay para permitir que los estilos CSS se apliquen
+        setTimeout(() => {
+            renderCalendar();
+        }, 50);
+    }
+}
+
+// Cargar tema guardado
+function loadTheme() {
+    const savedTheme = localStorage.getItem('colorcal-theme') || 'system';
+    applyTheme(savedTheme);
+    
+    // Escuchar cambios en la preferencia del sistema
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        const currentTheme = localStorage.getItem('colorcal-theme') || 'system';
+        if (currentTheme === 'system' && state.chart) {
+            // Re-renderizar calendario cuando cambia el tema del sistema
+            setTimeout(() => {
+                renderCalendar();
+            }, 50);
+        }
+    });
+}
+
+// Obtener colores actuales del tema
+function getThemeColors() {
+    const computedStyle = getComputedStyle(document.documentElement);
+    return {
+        bgPrimary: computedStyle.getPropertyValue('--bg-primary').trim() || '#f5f5f5',
+        bgSecondary: computedStyle.getPropertyValue('--bg-secondary').trim() || '#ffffff',
+        bgSidebarItem: computedStyle.getPropertyValue('--bg-sidebar-item').trim() || '#34495e',
+        textPrimary: computedStyle.getPropertyValue('--text-primary').trim() || '#333333',
+        textSecondary: computedStyle.getPropertyValue('--text-secondary').trim() || '#666666',
+        textMuted: computedStyle.getPropertyValue('--text-muted').trim() || '#95a5a6',
+        borderColor: computedStyle.getPropertyValue('--border-color').trim() || '#ddd',
+        accentPrimary: computedStyle.getPropertyValue('--accent-primary').trim() || '#3498db'
+    };
+}
+
+// ============================================
 // FUNCIONES DE UTILIDAD
 // ============================================
 
 // Función para calcular luminosidad de un color y determinar si el texto debe ser claro u oscuro
 function getContrastColor(hexColor) {
-    if (!hexColor) return '#555';
+    if (!hexColor) {
+        const colors = getThemeColors();
+        return colors.textPrimary;
+    }
     // Remover # si existe
     const hex = hexColor.replace('#', '');
     // Convertir a RGB
@@ -48,6 +115,7 @@ const state = {
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
+    loadTheme(); // Cargar tema antes de inicializar
     initializeApp();
     setupEventListeners();
 });
@@ -172,6 +240,11 @@ function setupEventListeners() {
         }
     });
     
+    // Selector de tema
+    document.getElementById('themeSelector').addEventListener('change', function() {
+        applyTheme(this.value);
+    });
+    
     // Generar leyenda antes de imprimir
     window.addEventListener('beforeprint', generatePrintLegend);
 }
@@ -282,7 +355,7 @@ function renderTagsList() {
     const container = document.getElementById('tagsList');
     
     if (state.tags.length === 0) {
-        container.innerHTML = '<p style="color: #95a5a6; font-size: 14px; text-align: center;">No hay etiquetas</p>';
+        container.innerHTML = '<p class="empty-message">No hay etiquetas</p>';
         return;
     }
     
@@ -480,6 +553,9 @@ function renderCalendar() {
         rowMaxHeight = Math.max(rowMaxHeight, calHeightPx);
         
         const monthText = `${adjustedYear}-${String(adjustedMonth).padStart(2, '0')}`;
+        
+        // Obtener colores del tema actual
+        const themeColors = getThemeColors();
 
         calendars.push({
             top: topPx,
@@ -491,7 +567,7 @@ function renderCalendar() {
             splitLine: {
                 show: true,
                 lineStyle: {
-                    color: '#ddd',
+                    color: themeColors.borderColor,
                     width: 1,
                     type: 'solid'
                 }
@@ -500,7 +576,8 @@ function renderCalendar() {
             dayLabel: {
                 nameMap: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
                 firstDay: 1,
-                position: 'start'
+                position: 'start',
+                color: themeColors.textSecondary
             },
             monthLabel: {
                 nameMap: 'es',
@@ -508,9 +585,9 @@ function renderCalendar() {
                 show: false
             },
             itemStyle: {
-                color: '#f0f0f0',
+                color: themeColors.bgSecondary,
                 borderWidth: 1,
-                borderColor: '#ccc'
+                borderColor: themeColors.borderColor
             }
         });
 
@@ -521,7 +598,7 @@ function renderCalendar() {
             top: Math.max(0, topPx - 56),
             style: {
                 text: monthText,
-                fill: '#333',
+                fill: themeColors.textPrimary,
                 fontWeight: 'bold',
                 fontSize: 14,
                 textAlign: 'center'
@@ -592,7 +669,7 @@ function renderCalendar() {
             const dayOfWeek = dateObj.getDay(); // 0=Dom, 6=Sáb
             const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
             const effectiveBgColor = bgColor || (state.highlightWeekends && isWeekend ? state.weekendColor : null);
-            const textColor = effectiveBgColor ? getContrastColor(effectiveBgColor) : '#555';
+            const textColor = effectiveBgColor ? getContrastColor(effectiveBgColor) : themeColors.textPrimary;
             return {
                 value: [d, 1],
                 label: {
@@ -637,7 +714,7 @@ function renderCalendar() {
             label: {
                 show: true,
                 formatter: params => (params.value && params.value[0] ? params.value[0].split('-')[2].replace(/^0/, '') : ''),
-                color: '#555',
+                color: themeColors.textPrimary,
                 fontSize: 10,
                 fontWeight: 700,
                 position: 'inside',
@@ -663,7 +740,8 @@ function renderCalendar() {
             top: 10,
             textStyle: {
                 fontSize: 24,
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                color: getThemeColors().textPrimary
             }
         },
         tooltip: {
@@ -710,7 +788,7 @@ function renderPeriodsList() {
     const container = document.getElementById('periodsList');
     
     if (state.periods.length === 0) {
-        container.innerHTML = '<p style="color: #95a5a6; font-size: 14px; text-align: center;">No hay períodos marcados</p>';
+        container.innerHTML = '<p class="empty-message">No hay períodos marcados</p>';
         return;
     }
     

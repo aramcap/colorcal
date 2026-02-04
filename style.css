@@ -1,3 +1,130 @@
+/* Variables CSS para temas */
+:root {
+    /* Tema claro (por defecto) */
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #2c3e50;
+    --bg-sidebar-item: #34495e;
+    --bg-input: #ffffff;
+    --bg-date-selection: #34495e;
+    
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-sidebar: #ecf0f1;
+    --text-muted: #95a5a6;
+    --text-light: #bdc3c7;
+    
+    --accent-primary: #3498db;
+    --accent-primary-hover: #2980b9;
+    --accent-secondary: #95a5a6;
+    --accent-secondary-hover: #7f8c8d;
+    --accent-danger: #e74c3c;
+    --accent-danger-hover: #c0392b;
+    
+    --border-color: #ddd;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --modal-overlay: rgba(0, 0, 0, 0.6);
+    
+    --scrollbar-track: #34495e;
+    --scrollbar-thumb: #3498db;
+    --scrollbar-thumb-hover: #2980b9;
+}
+
+/* Tema oscuro */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-primary: #1a1a2e;
+        --bg-secondary: #16213e;
+        --bg-sidebar: #0f0f23;
+        --bg-sidebar-item: #1a1a2e;
+        --bg-input: #2a2a4a;
+        --bg-date-selection: #1a1a2e;
+        
+        --text-primary: #e4e4e7;
+        --text-secondary: #a1a1aa;
+        --text-sidebar: #e4e4e7;
+        --text-muted: #71717a;
+        --text-light: #a1a1aa;
+        
+        --accent-primary: #6366f1;
+        --accent-primary-hover: #4f46e5;
+        --accent-secondary: #52525b;
+        --accent-secondary-hover: #3f3f46;
+        --accent-danger: #ef4444;
+        --accent-danger-hover: #dc2626;
+        
+        --border-color: #3f3f46;
+        --shadow-color: rgba(0, 0, 0, 0.4);
+        --modal-overlay: rgba(0, 0, 0, 0.8);
+        
+        --scrollbar-track: #1a1a2e;
+        --scrollbar-thumb: #6366f1;
+        --scrollbar-thumb-hover: #4f46e5;
+    }
+}
+
+/* Clase para forzar tema oscuro manualmente */
+[data-theme="dark"] {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-sidebar: #0f0f23;
+    --bg-sidebar-item: #1a1a2e;
+    --bg-input: #2a2a4a;
+    --bg-date-selection: #1a1a2e;
+    
+    --text-primary: #e4e4e7;
+    --text-secondary: #a1a1aa;
+    --text-sidebar: #e4e4e7;
+    --text-muted: #71717a;
+    --text-light: #a1a1aa;
+    
+    --accent-primary: #6366f1;
+    --accent-primary-hover: #4f46e5;
+    --accent-secondary: #52525b;
+    --accent-secondary-hover: #3f3f46;
+    --accent-danger: #ef4444;
+    --accent-danger-hover: #dc2626;
+    
+    --border-color: #3f3f46;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --modal-overlay: rgba(0, 0, 0, 0.8);
+    
+    --scrollbar-track: #1a1a2e;
+    --scrollbar-thumb: #6366f1;
+    --scrollbar-thumb-hover: #4f46e5;
+}
+
+/* Clase para forzar tema claro manualmente */
+[data-theme="light"] {
+    --bg-primary: #f5f5f5;
+    --bg-secondary: #ffffff;
+    --bg-sidebar: #2c3e50;
+    --bg-sidebar-item: #34495e;
+    --bg-input: #ffffff;
+    --bg-date-selection: #34495e;
+    
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --text-sidebar: #ecf0f1;
+    --text-muted: #95a5a6;
+    --text-light: #bdc3c7;
+    
+    --accent-primary: #3498db;
+    --accent-primary-hover: #2980b9;
+    --accent-secondary: #95a5a6;
+    --accent-secondary-hover: #7f8c8d;
+    --accent-danger: #e74c3c;
+    --accent-danger-hover: #c0392b;
+    
+    --border-color: #ddd;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    --modal-overlay: rgba(0, 0, 0, 0.6);
+    
+    --scrollbar-track: #34495e;
+    --scrollbar-thumb: #3498db;
+    --scrollbar-thumb-hover: #2980b9;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,9 +133,11 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #f5f5f5;
+    background: var(--bg-primary);
+    color: var(--text-primary);
     height: 100vh;
     overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .container {
@@ -20,25 +149,26 @@ body {
 /* Sidebar */
 .sidebar {
     width: 320px;
-    background: #2c3e50;
-    color: white;
+    background: var(--bg-sidebar);
+    color: var(--text-sidebar);
     padding: 20px;
     overflow-y: auto;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 2px 0 10px var(--shadow-color);
+    transition: background-color 0.3s ease;
 }
 
 .sidebar h2 {
     font-size: 24px;
     margin-bottom: 20px;
-    color: #ecf0f1;
+    color: var(--text-sidebar);
     text-align: center;
 }
 
 .sidebar h3 {
     font-size: 16px;
     margin-bottom: 15px;
-    color: #3498db;
-    border-bottom: 2px solid #3498db;
+    color: var(--accent-primary);
+    border-bottom: 2px solid var(--accent-primary);
     padding-bottom: 5px;
 }
 
@@ -50,7 +180,7 @@ label {
     display: block;
     margin-bottom: 5px;
     font-size: 14px;
-    color: #ecf0f1;
+    color: var(--text-sidebar);
 }
 
 input[type="month"],
@@ -61,9 +191,22 @@ select {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
-    border: none;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+input[type="month"]:focus,
+input[type="number"]:focus,
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
 input[type="color"] {
@@ -87,30 +230,30 @@ button {
 }
 
 .btn-primary {
-    background: #3498db;
+    background: var(--accent-primary);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #2980b9;
+    background: var(--accent-primary-hover);
 }
 
 .btn-secondary {
-    background: #95a5a6;
+    background: var(--accent-secondary);
     color: white;
 }
 
 .btn-secondary:hover {
-    background: #7f8c8d;
+    background: var(--accent-secondary-hover);
 }
 
 .btn-danger {
-    background: #e74c3c;
+    background: var(--accent-danger);
     color: white;
 }
 
 .btn-danger:hover {
-    background: #c0392b;
+    background: var(--accent-danger-hover);
 }
 
 /* Tag Form */
@@ -160,8 +303,9 @@ button {
     justify-content: space-between;
     padding: 10px;
     margin-bottom: 8px;
-    background: #34495e;
+    background: var(--bg-sidebar-item);
     border-radius: 4px;
+    transition: background-color 0.3s ease;
 }
 
 .tag-info {
@@ -183,12 +327,12 @@ button {
 
 .tag-day-count {
     font-size: 12px;
-    color: #95a5a6;
+    color: var(--text-muted);
     margin-left: 5px;
 }
 
 .tag-delete {
-    background: #e74c3c;
+    background: var(--accent-danger);
     color: white;
     border: none;
     padding: 5px 10px;
@@ -205,7 +349,7 @@ button {
 }
 
 .tag-delete:hover {
-    background: #c0392b;
+    background: var(--accent-danger-hover);
 }
 
 .tag-edit {
@@ -226,7 +370,7 @@ button {
 }
 
 .tag-edit:hover {
-    background: rgba(52, 152, 219, 0.3);
+    background: rgba(99, 102, 241, 0.3);
 }
 
 .tag-actions {
@@ -248,8 +392,9 @@ button {
     justify-content: space-between;
     padding: 10px;
     margin-bottom: 8px;
-    background: #34495e;
+    background: var(--bg-sidebar-item);
     border-radius: 4px;
+    transition: background-color 0.3s ease;
 }
 
 .period-info {
@@ -276,7 +421,7 @@ button {
 .period-tag-name {
     font-size: 13px;
     font-weight: bold;
-    color: #ecf0f1;
+    color: var(--text-sidebar);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -284,7 +429,7 @@ button {
 
 .period-dates {
     font-size: 11px;
-    color: #bdc3c7;
+    color: var(--text-light);
 }
 
 .period-actions {
@@ -313,11 +458,11 @@ button {
 }
 
 .period-edit:hover {
-    background: rgba(52, 152, 219, 0.3);
+    background: rgba(99, 102, 241, 0.3);
 }
 
 .period-delete:hover {
-    background: rgba(231, 76, 60, 0.3);
+    background: rgba(239, 68, 68, 0.3);
 }
 
 /* Modal */
@@ -327,7 +472,7 @@ button {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: var(--modal-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -335,20 +480,21 @@ button {
 }
 
 .modal-content {
-    background: #2c3e50;
+    background: var(--bg-sidebar);
     padding: 25px;
     border-radius: 8px;
     width: 90%;
     max-width: 400px;
-    color: white;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    color: var(--text-sidebar);
+    box-shadow: 0 10px 30px var(--shadow-color);
+    transition: background-color 0.3s ease;
 }
 
 .modal-content h3 {
     font-size: 18px;
     margin-bottom: 20px;
-    color: #3498db;
-    border-bottom: 2px solid #3498db;
+    color: var(--accent-primary);
+    border-bottom: 2px solid var(--accent-primary);
     padding-bottom: 10px;
 }
 
@@ -356,7 +502,7 @@ button {
     display: block;
     margin-bottom: 5px;
     font-size: 14px;
-    color: #ecf0f1;
+    color: var(--text-sidebar);
 }
 
 .modal-form select,
@@ -364,9 +510,11 @@ button {
     width: 100%;
     padding: 8px;
     margin-bottom: 15px;
-    border: none;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
     font-size: 14px;
+    background: var(--bg-input);
+    color: var(--text-primary);
 }
 
 .modal-buttons {
@@ -383,8 +531,9 @@ button {
 .date-selection {
     margin-bottom: 15px;
     padding: 10px;
-    background: #34495e;
+    background: var(--bg-date-selection);
     border-radius: 4px;
+    transition: background-color 0.3s ease;
 }
 
 /* Calendar Container */
@@ -395,6 +544,8 @@ button {
     overflow-x: hidden;
     display: block;
     position: relative;
+    background: var(--bg-primary);
+    transition: background-color 0.3s ease;
 }
 
 #calendar {
@@ -407,16 +558,16 @@ button {
 }
 
 ::-webkit-scrollbar-track {
-    background: #34495e;
+    background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #3498db;
+    background: var(--scrollbar-thumb);
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #2980b9;
+    background: var(--scrollbar-thumb-hover);
 }
 
 /* Responsive */
@@ -533,4 +684,11 @@ button {
 /* Ocultar pie de página en pantalla */
 .print-footer {
     display: none;
+}
+
+/* Mensaje vacío */
+.empty-message {
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
 }
