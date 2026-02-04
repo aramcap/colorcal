@@ -1,0 +1,509 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f5f5;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 320px;
+    background: #2c3e50;
+    color: white;
+    padding: 20px;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ecf0f1;
+    text-align: center;
+}
+
+.sidebar h3 {
+    font-size: 16px;
+    margin-bottom: 15px;
+    color: #3498db;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+}
+
+.section {
+    margin-bottom: 30px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #ecf0f1;
+}
+
+input[type="month"],
+input[type="number"],
+input[type="text"],
+input[type="date"],
+select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+button {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+/* Tag Form */
+.tag-form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Weekend option */
+.weekend-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.weekend-option label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.weekend-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.weekend-option input[type="color"] {
+    width: 40px;
+    height: 30px;
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+.tags-list {
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.tag-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #34495e;
+    border-radius: 4px;
+}
+
+.tag-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.tag-color-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.tag-name {
+    font-size: 14px;
+}
+
+.tag-delete {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+    min-width: 32px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.tag-delete:hover {
+    background: #c0392b;
+}
+
+.tag-edit {
+    background: transparent;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+    min-width: 32px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+    transition: background 0.2s;
+}
+
+.tag-edit:hover {
+    background: rgba(52, 152, 219, 0.3);
+}
+
+.tag-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Periods List */
+.periods-list {
+    margin-top: 10px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.period-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #34495e;
+    border-radius: 4px;
+}
+
+.period-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.period-color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.period-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.period-tag-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #ecf0f1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.period-dates {
+    font-size: 11px;
+    color: #bdc3c7;
+}
+
+.period-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-left: 8px;
+}
+
+.period-edit,
+.period-delete {
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+    min-width: 28px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+    transition: background 0.2s;
+}
+
+.period-edit:hover {
+    background: rgba(52, 152, 219, 0.3);
+}
+
+.period-delete:hover {
+    background: rgba(231, 76, 60, 0.3);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: #2c3e50;
+    padding: 25px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h3 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #3498db;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.modal-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: #ecf0f1;
+}
+
+.modal-form select,
+.modal-form input[type="date"] {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-buttons button {
+    flex: 1;
+}
+
+/* Date Selection */
+.date-selection {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #34495e;
+    border-radius: 4px;
+}
+
+/* Calendar Container */
+.calendar-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: block;
+    position: relative;
+}
+
+#calendar {
+    width: 100%;
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #34495e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #3498db;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #2980b9;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        max-height: 50vh;
+    }
+    
+    .calendar-container {
+        height: 50vh;
+    }
+}
+
+/* Leyenda para impresión */
+.print-legend {
+    display: none;
+}
+
+.print-legend h3 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    color: #333;
+    border-bottom: 2px solid #333;
+    padding-bottom: 5px;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 20px;
+    margin-bottom: 8px;
+}
+
+.legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+}
+
+.legend-name {
+    font-size: 14px;
+    color: #333;
+}
+
+/* Estilos de impresión */
+@media print {
+    body {
+        background: white;
+        overflow: visible;
+        height: auto;
+    }
+    
+    .container {
+        display: block;
+        height: auto;
+        overflow: visible;
+    }
+    
+    .sidebar {
+        display: none !important;
+    }
+    
+    .calendar-container {
+        width: 100%;
+        height: auto !important;
+        overflow: visible;
+        padding: 0;
+    }
+    
+    #calendar {
+        width: 100%;
+        height: auto !important;
+        min-height: auto !important;
+    }
+    
+    .print-legend {
+        display: block;
+        margin-top: 20px;
+        padding: 15px;
+        border-top: 2px solid #333;
+        page-break-inside: avoid;
+    }
+    
+    #legendContent {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+}

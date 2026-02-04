@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario Fácil</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Panel lateral -->
+        <div class="sidebar">
+            <h2>Configuración</h2>
+            
+            <!-- Selector de periodo -->
+            <div class="section">
+                <h3>Período</h3>
+                <label>Fecha inicio:</label>
+                <input type="month" id="startMonth" />
+                
+                <label>Meses a mostrar:</label>
+                <input type="number" id="monthsCount" min="1" max="36" value="12" />
+                
+                <button id="updatePeriod" class="btn-primary">Actualizar Calendario</button>
+            </div>
+            
+            <!-- Opciones de visualización -->
+            <div class="section">
+                <h3>Visualización</h3>
+                <div class="weekend-option">
+                    <label>
+                        <input type="checkbox" id="highlightWeekends" />
+                        Resaltar fines de semana
+                    </label>
+                    <input type="color" id="weekendColor" value="#ffcccc" title="Color de fin de semana" />
+                </div>
+            </div>
+            
+            <!-- Gestión de etiquetas -->
+            <div class="section">
+                <h3>Etiquetas</h3>
+                <div class="tag-form">
+                    <input type="text" id="tagName" placeholder="Nombre etiqueta" />
+                    <input type="color" id="tagColor" value="#3498db" />
+                    <button id="addTag" class="btn-primary">Agregar</button>
+                </div>
+                
+                <div id="tagsList" class="tags-list"></div>
+            </div>
+            
+            <!-- Selección de días -->
+            <div class="section">
+                <h3>Marcar días</h3>
+                <label>Seleccionar etiqueta:</label>
+                <select id="selectedTag">
+                    <option value="">-- Seleccionar --</option>
+                </select>
+                
+                <div class="date-selection">
+                    <label>Fecha inicio:</label>
+                    <input type="date" id="startDate" />
+                    <label>Fecha fin:</label>
+                    <input type="date" id="endDate" />
+                    <button id="markRange" class="btn-secondary">Marcar</button>
+                </div>
+            </div>
+            
+            <!-- Lista de períodos marcados -->
+            <div class="section">
+                <h3>Períodos Marcados</h3>
+                <div id="periodsList" class="periods-list"></div>
+
+                <button id="clearSelection" class="btn-danger">Borrar todos</button>
+            </div>
+            
+            <!-- Exportar/Importar -->
+            <div class="section">
+                <h3>Datos</h3>
+                <button id="exportData" class="btn-secondary">Exportar</button>
+                <button id="importData" class="btn-secondary">Importar</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" />
+            </div>
+        </div>
+        
+        <!-- Área del calendario -->
+        <div class="calendar-container">
+            <div id="calendar"></div>
+        </div>
+        
+        <!-- Leyenda para impresión -->
+        <div id="printLegend" class="print-legend">
+            <h3>Leyenda</h3>
+            <div id="legendContent"></div>
+        </div>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
