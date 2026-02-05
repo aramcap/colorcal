@@ -57,6 +57,10 @@ function loadTheme() {
 
 // Obtener colores actuales del tema
 function getThemeColors() {
+    // Si estamos en modo impresión, forzar colores claros
+    if (state.isPrinting) {
+        return getLightThemeColors();
+    }
     const computedStyle = getComputedStyle(document.documentElement);
     return {
         bgPrimary: computedStyle.getPropertyValue('--bg-primary').trim() || '#f5f5f5',
@@ -67,6 +71,20 @@ function getThemeColors() {
         textMuted: computedStyle.getPropertyValue('--text-muted').trim() || '#95a5a6',
         borderColor: computedStyle.getPropertyValue('--border-color').trim() || '#ddd',
         accentPrimary: computedStyle.getPropertyValue('--accent-primary').trim() || '#3498db'
+    };
+}
+
+// Obtener colores del tema claro (para impresión)
+function getLightThemeColors() {
+    return {
+        bgPrimary: '#f5f5f5',
+        bgSecondary: '#ffffff',
+        bgSidebarItem: '#34495e',
+        textPrimary: '#333333',
+        textSecondary: '#666666',
+        textMuted: '#95a5a6',
+        borderColor: '#ddd',
+        accentPrimary: '#3498db'
     };
 }
 
@@ -110,7 +128,8 @@ const state = {
     monthsCount: 12,
     chart: null,
     highlightWeekends: false,
-    weekendColor: '#ffcccc'
+    weekendColor: '#ffcccc',
+    isPrinting: false
 };
 
 // Inicializar la aplicación
@@ -245,8 +264,34 @@ function setupEventListeners() {
         applyTheme(this.value);
     });
     
-    // Generar leyenda antes de imprimir
-    window.addEventListener('beforeprint', generatePrintLegend);
+    // Generar leyenda antes de imprimir y forzar tema claro
+    window.addEventListener('beforeprint', prepareForPrint);
+    window.addEventListener('afterprint', restoreAfterPrint);
+}
+
+// Preparar para impresión: forzar tema claro y re-renderizar
+function prepareForPrint() {
+    state.isPrinting = true;
+    // Re-renderizar calendario con colores claros
+    if (state.chart) {
+        renderCalendar();
+    }
+    // Generar leyenda
+    generatePrintLegend();
+}
+
+// Restaurar después de imprimir
+function restoreAfterPrint() {
+    state.isPrinting = false;
+    // Pequeño delay para permitir que el layout se restaure completamente
+    setTimeout(() => {
+        // Re-renderizar calendario con colores del tema actual
+        if (state.chart) {
+            // Forzar resize para recalcular dimensiones correctas
+            state.chart.resize();
+            renderCalendar();
+        }
+    }, 100);
 }
 
 // Generar leyenda para impresión

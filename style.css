@@ -621,10 +621,38 @@ button {
 
 /* Estilos de impresión */
 @media print {
+    /* Forzar tema claro para impresión */
+    :root {
+        --bg-primary: #f5f5f5;
+        --bg-secondary: #ffffff;
+        --bg-sidebar: #2c3e50;
+        --bg-sidebar-item: #34495e;
+        --bg-input: #ffffff;
+        --bg-date-selection: #34495e;
+        
+        --text-primary: #333333;
+        --text-secondary: #666666;
+        --text-sidebar: #ecf0f1;
+        --text-muted: #95a5a6;
+        --text-light: #bdc3c7;
+        
+        --accent-primary: #3498db;
+        --accent-primary-hover: #2980b9;
+        --accent-secondary: #95a5a6;
+        --accent-secondary-hover: #7f8c8d;
+        --accent-danger: #e74c3c;
+        --accent-danger-hover: #c0392b;
+        
+        --border-color: #ddd;
+        --shadow-color: rgba(0, 0, 0, 0.1);
+        --modal-overlay: rgba(0, 0, 0, 0.6);
+    }
+    
     body {
         background: white;
         overflow: visible;
         height: auto;
+        color: #333333;
     }
     
     .container {
