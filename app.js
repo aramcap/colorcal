@@ -129,8 +129,71 @@ const state = {
     chart: null,
     highlightWeekends: false,
     weekendColor: '#ffcccc',
-    isPrinting: false
+    isPrinting: false,
+    chartPixelRatio: null,
+    lastRenderWidth: 0
 };
+
+// ============================================
+// PANEL LATERAL RESPONSIVE
+// ============================================
+
+// Por debajo de este ancho el panel de configuración se comporta como un
+// cajón deslizante superpuesto (ver la media query equivalente en style.css).
+const MOBILE_BREAKPOINT = 900;
+
+function isMobileLayout() {
+    return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
+}
+
+function isSidebarOpen() {
+    const sidebar = document.getElementById('sidebar');
+    return !!sidebar && sidebar.classList.contains('is-open');
+}
+
+function openSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const toggle = document.getElementById('menuToggle');
+    if (!sidebar) return;
+
+    sidebar.classList.add('is-open');
+    if (backdrop) backdrop.classList.add('is-visible');
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.setAttribute('aria-label', 'Cerrar configuración');
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const toggle = document.getElementById('menuToggle');
+    if (!sidebar) return;
+
+    sidebar.classList.remove('is-open');
+    if (backdrop) backdrop.classList.remove('is-visible');
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Abrir configuración');
+    }
+}
+
+function toggleSidebar() {
+    if (isSidebarOpen()) {
+        closeSidebar();
+    } else {
+        openSidebar();
+    }
+}
+
+// Tras una acción que modifica el calendario, cerrar el cajón en móvil para
+// que el resultado quede a la vista sin pasos adicionales.
+function closeSidebarOnMobile() {
+    if (isMobileLayout()) {
+        closeSidebar();
+    }
+}
 
 // Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
@@ -264,6 +327,37 @@ function setupEventListeners() {
         applyTheme(this.value);
     });
     
+    // Panel lateral en móvil
+    document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+    document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
+
+    // Escape cierra primero el modal abierto y, si no hay, el panel lateral
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        if (document.querySelector('.modal-overlay')) {
+            closeModal();
+        } else if (isSidebarOpen()) {
+            closeSidebar();
+        }
+    });
+
+    // Tocar fuera del modal lo cierra
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
+            closeModal();
+        }
+    });
+
+    // Recalcular el calendario cuando cambia el espacio disponible
+    // (rotación del dispositivo, barra de direcciones del navegador, etc.)
+    if (typeof ResizeObserver !== 'undefined') {
+        const calendarArea = document.querySelector('.calendar-container');
+        if (calendarArea) {
+            new ResizeObserver(scheduleViewportUpdate).observe(calendarArea);
+        }
+    }
+
     // Generar leyenda antes de imprimir y forzar tema claro
     window.addEventListener('beforeprint', prepareForPrint);
     window.addEventListener('afterprint', restoreAfterPrint);
@@ -495,6 +589,8 @@ function markRange() {
     // Limpiar inputs
     startInput.value = '';
     endInput.value = '';
+
+    closeSidebarOnMobile();
 }
 
 function clearSelection() {
@@ -545,16 +641,110 @@ function updatePeriod() {
     
     renderCalendar();
     saveToLocalStorage();
+    closeSidebarOnMobile();
+}
+
+// Límites prácticos del elemento <canvas> en navegadores móviles. Un calendario de
+// muchos meses en una sola columna puede superarlos y quedarse en blanco, así que
+// ajustamos la densidad de píxeles al tamaño real del lienzo.
+const MAX_CANVAS_SIDE_PX = 16000;
+const MAX_CANVAS_AREA_PX = 16000000;
+
+function getSafeDevicePixelRatio(widthPx, heightPx) {
+    const dpr = window.devicePixelRatio || 1;
+    if (!widthPx || !heightPx) return dpr;
+    const sideLimit = MAX_CANVAS_SIDE_PX / Math.max(widthPx, heightPx);
+    const areaLimit = Math.sqrt(MAX_CANVAS_AREA_PX / (widthPx * heightPx));
+    return Math.max(1, Math.min(dpr, sideLimit, areaLimit));
+}
+
+// La densidad de píxeles solo puede fijarse al crear la instancia, así que
+// recreamos el chart cuando el tamaño del lienzo obliga a cambiarla.
+function ensureChart(container, widthPx, heightPx) {
+    const dpr = getSafeDevicePixelRatio(widthPx, heightPx);
+
+    if (state.chart && Math.abs((state.chartPixelRatio || 0) - dpr) > 0.05) {
+        state.chart.dispose();
+        state.chart = null;
+    }
+
+    if (!state.chart) {
+        state.chart = echarts.init(container, null, { devicePixelRatio: dpr });
+        state.chartPixelRatio = dpr;
+    }
+
+    return state.chart;
+}
+
+// Parámetros de maquetación según el ancho disponible: en móvil se reduce el
+// número de columnas y se agrandan celdas y tipografías para que el calendario
+// siga siendo legible.
+function getCalendarLayout(containerWidth, monthsCount) {
+    let columns;
+    let titleFontSize;
+    let monthFontSize;
+    let topOffsetPx;
+    let gapY;
+    let calendarPadPx;
+    let monthLabelGapPx;
+
+    if (containerWidth < 520) {
+        columns = 1;
+        titleFontSize = 18;
+        monthFontSize = 15;
+        topOffsetPx = 100;
+        gapY = 62;
+        calendarPadPx = 34;
+        monthLabelGapPx = 56;
+    } else if (containerWidth < 860) {
+        columns = 2;
+        titleFontSize = 20;
+        monthFontSize = 14;
+        topOffsetPx = 102;
+        gapY = 76;
+        calendarPadPx = 32;
+        monthLabelGapPx = 48;
+    } else {
+        columns = 3;
+        titleFontSize = 24;
+        monthFontSize = 14;
+        topOffsetPx = 120;
+        gapY = 90;
+        calendarPadPx = 30;
+        monthLabelGapPx = 56;
+    }
+
+    columns = Math.max(1, Math.min(columns, monthsCount));
+
+    const widthPercent = 100 / columns;
+    const calendarWidthPx = containerWidth * (widthPercent - 3) / 100;
+    const cellWidthPx = Math.max(18, calendarWidthPx / 7 - 2);
+    // A una sola columna las celdas son mucho más anchas: crecen también en alto
+    // para no quedar aplastadas y para facilitar la lectura en pantalla pequeña.
+    const cellHeightPx = Math.round(
+        Math.max(26, Math.min(46, cellWidthPx * (columns === 1 ? 0.72 : 0.52)))
+    );
+    const dayFontSize = Math.max(10, Math.min(15, Math.round(cellHeightPx * 0.42)));
+
+    return {
+        columns,
+        widthPercent,
+        cellWidthPx,
+        cellHeightPx,
+        topOffsetPx,
+        gapY,
+        calendarPadPx,
+        monthLabelGapPx,
+        titleFontSize,
+        monthFontSize,
+        dayFontSize
+    };
 }
 
 // Renderizar calendario con ECharts
 function renderCalendar() {
     const container = document.getElementById('calendar');
-    
-    if (!state.chart) {
-        state.chart = echarts.init(container);
-    }
-    
+
     // Calcular fechas
     const [year, month] = state.startMonth.split('-').map(Number);
     const startDate = new Date(year, month - 1, 1);
@@ -563,15 +753,17 @@ function renderCalendar() {
     const calendars = [];
     const series = [];
     const graphics = [];
-    const columns = Math.min(3, Math.max(1, state.monthsCount));
-    const widthPercent = 100 / columns;
     const containerWidth = container.clientWidth || container.offsetWidth || 800;
-    const topOffsetPx = 120; // espacio para título general
-    const gapY = 90; // espacio entre filas de meses (incluye título)
-    const cellHeightPx = 26; // tamaño fijo de celda para todos los meses
-    const calendarPadPx = 30; // espacio extra para labels de días
-    const calendarWidthPx = (containerWidth * (widthPercent - 3) / 100);
-    const cellWidthPx = Math.max(18, calendarWidthPx / 7 - 2);
+    const layout = getCalendarLayout(containerWidth, Math.max(1, state.monthsCount));
+    const columns = layout.columns;
+    const widthPercent = layout.widthPercent;
+    const topOffsetPx = layout.topOffsetPx; // espacio para título general
+    const gapY = layout.gapY; // espacio entre filas de meses (incluye título)
+    const cellHeightPx = layout.cellHeightPx;
+    const calendarPadPx = layout.calendarPadPx; // espacio extra para labels de días
+    const cellWidthPx = layout.cellWidthPx;
+
+    state.lastRenderWidth = containerWidth;
     
     let currentTopPx = topOffsetPx;
     let rowMaxHeight = 0;
@@ -640,12 +832,12 @@ function renderCalendar() {
             type: 'text',
             left: `${leftPercent}%`,
             right: `${100 - leftPercent - (widthPercent - 3)}%`,
-            top: Math.max(0, topPx - 56),
+            top: Math.max(0, topPx - layout.monthLabelGapPx),
             style: {
                 text: monthText,
                 fill: themeColors.textPrimary,
                 fontWeight: 'bold',
-                fontSize: 14,
+                fontSize: layout.monthFontSize,
                 textAlign: 'center'
             }
         });
@@ -760,7 +952,7 @@ function renderCalendar() {
                 show: true,
                 formatter: params => (params.value && params.value[0] ? params.value[0].split('-')[2].replace(/^0/, '') : ''),
                 color: themeColors.textPrimary,
-                fontSize: 10,
+                fontSize: layout.dayFontSize,
                 fontWeight: 700,
                 position: 'inside',
                 offset: [0, 0]
@@ -778,20 +970,26 @@ function renderCalendar() {
     container.style.height = `${totalHeightPx}px`;
     container.style.minHeight = `${totalHeightPx}px`;
 
+    ensureChart(container, containerWidth, totalHeightPx);
+
     const option = {
         title: {
             text: 'Calendario',
             left: 'center',
             top: 10,
             textStyle: {
-                fontSize: 24,
+                fontSize: layout.titleFontSize,
                 fontWeight: 'bold',
                 color: getThemeColors().textPrimary
             }
         },
         tooltip: {
             trigger: 'item',
-            confine: true
+            confine: true,
+            enterable: false,
+            textStyle: {
+                fontSize: layout.columns === 1 ? 14 : 12
+            }
         },
         calendar: calendars,
         graphic: graphics,
@@ -1215,9 +1413,36 @@ function importData(event) {
     event.target.value = '';
 }
 
-// Responsive - redimensionar calendario
-window.addEventListener('resize', function() {
-    if (state.chart) {
+// ============================================
+// RESPONSIVE - REDIMENSIONADO
+// ============================================
+
+let viewportUpdateTimer = null;
+
+function handleViewportUpdate() {
+    if (!isMobileLayout()) {
+        // Al volver a un layout de escritorio el cajón deja de tener sentido
+        closeSidebar();
+    }
+
+    if (!state.chart) return;
+
+    const container = document.getElementById('calendar');
+    const width = container ? (container.clientWidth || container.offsetWidth) : 0;
+
+    // Un cambio de ancho altera columnas y tamaño de celda, así que hay que
+    // volver a construir el calendario; si solo cambia el alto basta con resize().
+    if (width && Math.abs(width - (state.lastRenderWidth || 0)) > 1) {
+        renderCalendar();
+    } else {
         state.chart.resize();
     }
-});
+}
+
+function scheduleViewportUpdate() {
+    clearTimeout(viewportUpdateTimer);
+    viewportUpdateTimer = setTimeout(handleViewportUpdate, 150);
+}
+
+window.addEventListener('resize', scheduleViewportUpdate);
+window.addEventListener('orientationchange', scheduleViewportUpdate);

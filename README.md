@@ -13,6 +13,7 @@ Colorcal es una aplicación web para visualizar un calendario de varios meses y 
 - Listado y gestión de los períodos marcados.
 - Exportación e importación de datos en formato JSON.
 - Tema claro, oscuro o automático (según preferencia del sistema).
+- Interfaz adaptable: en móvil y tablet la configuración se abre como panel lateral deslizante y el calendario ajusta columnas y tamaño de celda al ancho disponible.
 - Vista de impresión con leyenda y pie de página.
 
 ## Uso

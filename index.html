@@ -2,70 +2,89 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#2c3e50" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f0f23" media="(prefers-color-scheme: dark)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>Colorcal</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 </head>
 <body>
+    <!-- Barra superior (solo visible en pantallas pequeñas) -->
+    <header class="topbar">
+        <button type="button" id="menuToggle" class="menu-toggle" aria-label="Abrir configuración" aria-expanded="false" aria-controls="sidebar">
+            <span class="menu-toggle-bars" aria-hidden="true"></span>
+        </button>
+        <span class="topbar-title">Colorcal</span>
+    </header>
+
     <div class="container">
+        <!-- Fondo oscuro del panel lateral en móvil -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
         <!-- Panel lateral -->
-        <div class="sidebar">
-            <h2>Configuración</h2>
-            
+        <aside class="sidebar" id="sidebar" aria-label="Configuración">
+            <div class="sidebar-header">
+                <h2>Configuración</h2>
+                <button type="button" id="sidebarClose" class="sidebar-close" aria-label="Cerrar configuración">✕</button>
+            </div>
+
             <!-- Selector de periodo -->
             <div class="section">
                 <h3>Período</h3>
-                <label>Fecha inicio:</label>
+                <label for="startMonth">Fecha inicio:</label>
                 <input type="month" id="startMonth" min="1900-01" max="2100-12" required />
-                
-                <label>Meses a mostrar:</label>
-                <input type="number" id="monthsCount" min="1" max="36" value="12" step="1" required />
-                
+
+                <label for="monthsCount">Meses a mostrar:</label>
+                <input type="number" id="monthsCount" min="1" max="36" value="12" step="1" inputmode="numeric" required />
+
                 <button id="updatePeriod" class="btn-primary">Actualizar Calendario</button>
             </div>
-            
+
             <!-- Opciones de visualización -->
             <div class="section">
                 <h3>Visualización</h3>
                 <div class="weekend-option">
-                    <label>
+                    <label for="highlightWeekends">
                         <input type="checkbox" id="highlightWeekends" />
                         Resaltar fines de semana
                     </label>
-                    <input type="color" id="weekendColor" value="#ffcccc" title="Color de fin de semana" />
+                    <input type="color" id="weekendColor" value="#ffcccc" title="Color de fin de semana" aria-label="Color de fin de semana" />
                 </div>
             </div>
-            
+
             <!-- Gestión de etiquetas -->
             <div class="section">
                 <h3>Etiquetas</h3>
                 <div class="tag-form">
-                    <input type="text" id="tagName" placeholder="Nombre etiqueta" />
-                    <input type="color" id="tagColor" value="#3498db" />
+                    <input type="text" id="tagName" placeholder="Nombre etiqueta" aria-label="Nombre de la etiqueta" autocomplete="off" />
+                    <input type="color" id="tagColor" value="#3498db" aria-label="Color de la etiqueta" />
                     <button id="addTag" class="btn-primary">Agregar</button>
                 </div>
-                
+
                 <div id="tagsList" class="tags-list"></div>
             </div>
-            
+
             <!-- Selección de días -->
             <div class="section">
                 <h3>Marcar días</h3>
-                <label>Seleccionar etiqueta:</label>
+                <label for="selectedTag">Seleccionar etiqueta:</label>
                 <select id="selectedTag">
                     <option value="">-- Seleccionar --</option>
                 </select>
-                
+
                 <div class="date-selection">
-                    <label>Fecha inicio:</label>
+                    <label for="startDate">Fecha inicio:</label>
                     <input type="date" id="startDate" />
-                    <label>Fecha fin:</label>
+                    <label for="endDate">Fecha fin:</label>
                     <input type="date" id="endDate" />
                     <button id="markRange" class="btn-secondary">Marcar</button>
                 </div>
             </div>
-            
+
             <!-- Lista de períodos marcados -->
             <div class="section">
                 <h3>Períodos Marcados</h3>
@@ -73,43 +92,45 @@
 
                 <button id="clearSelection" class="btn-danger">Borrar todos</button>
             </div>
-            
+
             <!-- Exportar/Importar -->
             <div class="section">
                 <h3>Datos</h3>
-                <button id="exportData" class="btn-secondary">Exportar</button>
-                <button id="importData" class="btn-secondary">Importar</button>
+                <div class="button-row">
+                    <button id="exportData" class="btn-secondary">Exportar</button>
+                    <button id="importData" class="btn-secondary">Importar</button>
+                </div>
                 <input type="file" id="importFile" accept=".json" style="display: none;" />
             </div>
-            
+
             <!-- Tema -->
             <div class="section">
                 <h3>Tema</h3>
-                <select id="themeSelector">
+                <select id="themeSelector" aria-label="Tema de la interfaz">
                     <option value="system">🖥️ Automático (sistema)</option>
                     <option value="light">☀️ Claro</option>
                     <option value="dark">🌙 Oscuro</option>
                 </select>
             </div>
-        </div>
-        
+        </aside>
+
         <!-- Área del calendario -->
         <div class="calendar-container">
             <div id="calendar"></div>
         </div>
-        
+
         <!-- Leyenda para impresión -->
         <div id="printLegend" class="print-legend">
             <h3>Leyenda</h3>
             <div id="legendContent"></div>
         </div>
-        
+
         <!-- Pie de página para impresión -->
         <div id="printFooter" class="print-footer">
             <span>Generado con <a id="footerLink" href=""></a></span>
         </div>
     </div>
-    
+
     <script src="app.js"></script>
 </body>
 </html>
