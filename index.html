@@ -56,6 +56,23 @@
                 </div>
             </div>
 
+            <!-- Festivos -->
+            <div class="section">
+                <h3>Festivos</h3>
+                <div class="holiday-form">
+                    <input type="date" id="holidayDate" aria-label="Fecha del festivo" />
+                    <input type="text" id="holidayName" placeholder="Nombre (opcional)" aria-label="Nombre del festivo" autocomplete="off" />
+                    <button id="addHoliday" class="btn-primary">Añadir festivo</button>
+                </div>
+
+                <div class="holiday-color-option">
+                    <label for="holidayColor">Color de los festivos</label>
+                    <input type="color" id="holidayColor" value="#e74c3c" aria-label="Color de los festivos" />
+                </div>
+
+                <div id="holidaysList" class="holidays-list"></div>
+            </div>
+
             <!-- Gestión de etiquetas -->
             <div class="section">
                 <h3>Etiquetas</h3>
