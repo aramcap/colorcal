@@ -92,6 +92,62 @@ function getLightThemeColors() {
 // FUNCIONES DE UTILIDAD
 // ============================================
 
+// Modos de conteo de un período
+const COUNT_MODE_NATURAL = 'natural';   // todos los días del rango
+const COUNT_MODE_BUSINESS = 'business'; // solo de lunes a viernes
+
+// Interpreta 'YYYY-MM-DD' en horario local. new Date('YYYY-MM-DD') lo parsea como
+// UTC y desplaza el día en husos al oeste de Greenwich, lo que descuadraría el
+// cálculo de fines de semana respecto a lo que se pinta en el calendario.
+function parseLocalDate(dateStr) {
+    const [year, month, day] = String(dateStr).split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+// Sábado o domingo
+function isWeekendDate(date) {
+    const dayOfWeek = date.getDay(); // 0=Dom, 6=Sáb
+    return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
+function normalizeCountMode(value) {
+    return value === COUNT_MODE_BUSINESS ? COUNT_MODE_BUSINESS : COUNT_MODE_NATURAL;
+}
+
+// Los períodos guardados antes de existir esta opción se consideran naturales
+function normalizePeriods(raw) {
+    return (raw || []).map(period => ({
+        ...period,
+        countMode: normalizeCountMode(period.countMode)
+    }));
+}
+
+// Fechas (YYYY-MM-DD) que abarca un período. En modo laborable se descartan los
+// fines de semana, de modo que ni se marcan en el calendario ni se cuentan.
+function getPeriodDates(startDateStr, endDateStr, countMode) {
+    const dates = [];
+    const current = parseLocalDate(startDateStr);
+    const end = parseLocalDate(endDateStr);
+
+    while (current <= end) {
+        if (countMode !== COUNT_MODE_BUSINESS || !isWeekendDate(current)) {
+            dates.push(formatDate(current));
+        }
+        current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
+}
+
+// Texto del contador de un período, p. ej. "10 laborables" o "12 días"
+function formatPeriodCount(period) {
+    const total = getPeriodDates(period.startDate, period.endDate, period.countMode).length;
+    if (period.countMode === COUNT_MODE_BUSINESS) {
+        return total === 1 ? '1 laborable' : `${total} laborables`;
+    }
+    return total === 1 ? '1 día' : `${total} días`;
+}
+
 // Función para calcular luminosidad de un color y determinar si el texto debe ser claro u oscuro
 function getContrastColor(hexColor) {
     if (!hexColor) {
@@ -537,8 +593,6 @@ function markRange() {
     const endInput = document.getElementById('endDate');
     const tagSelect = document.getElementById('selectedTag');
     
-    const startDate = new Date(startInput.value);
-    const endDate = new Date(endInput.value);
     const tagId = tagSelect.value;
     
     if (!startInput.value || !endInput.value) {
@@ -551,8 +605,18 @@ function markRange() {
         return;
     }
     
-    if (startDate > endDate) {
+    if (parseLocalDate(startInput.value) > parseLocalDate(endInput.value)) {
         alert('La fecha de inicio debe ser anterior a la fecha de fin');
+        return;
+    }
+    
+    const countMode = document.getElementById('businessDaysOnly').checked
+        ? COUNT_MODE_BUSINESS
+        : COUNT_MODE_NATURAL;
+    const dates = getPeriodDates(startInput.value, endInput.value, countMode);
+
+    if (dates.length === 0) {
+        alert('El rango seleccionado no contiene ningún día laborable');
         return;
     }
     
@@ -565,22 +629,20 @@ function markRange() {
         startDate: startInput.value,
         endDate: endInput.value,
         tagName: tag.name,
-        tagColor: tag.color
+        tagColor: tag.color,
+        countMode: countMode
     };
     state.periods.push(period);
     
-    // Marcar todos los días en el rango
-    let currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const dateStr = formatDate(currentDate);
+    // Marcar los días que abarca el período
+    dates.forEach(dateStr => {
         const current = Array.isArray(state.markedDays[dateStr]) ? state.markedDays[dateStr] : (state.markedDays[dateStr] ? [state.markedDays[dateStr]] : []);
         const exists = current.some(entry => entry.tagId === tag.id);
         if (!exists) {
             current.push({ tagId: tag.id, color: tag.color, name: tag.name, periodId: period.id });
         }
         state.markedDays[dateStr] = current;
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
+    });
     
     renderPeriodsList();
     renderCalendar();
@@ -902,9 +964,7 @@ function renderCalendar() {
         const daysInMonth = getDaysOfMonth(adjustedYear, adjustedMonth).map(d => {
             const bgColor = getDayBackgroundColor(d, state.markedDays);
             // Verificar si es fin de semana
-            const dateObj = new Date(d);
-            const dayOfWeek = dateObj.getDay(); // 0=Dom, 6=Sáb
-            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const isWeekend = isWeekendDate(parseLocalDate(d));
             const effectiveBgColor = bgColor || (state.highlightWeekends && isWeekend ? state.weekendColor : null);
             const textColor = effectiveBgColor ? getContrastColor(effectiveBgColor) : themeColors.textPrimary;
             return {
@@ -918,9 +978,7 @@ function renderCalendar() {
         // Serie para colorear fines de semana (si está activado)
         if (state.highlightWeekends) {
             const weekendDays = getDaysOfMonth(adjustedYear, adjustedMonth).filter(d => {
-                const dateObj = new Date(d);
-                const dayOfWeek = dateObj.getDay();
-                return (dayOfWeek === 0 || dayOfWeek === 6) && !state.markedDays[d];
+                return isWeekendDate(parseLocalDate(d)) && !state.markedDays[d];
             });
             
             if (weekendDays.length > 0) {
@@ -1041,7 +1099,7 @@ function renderPeriodsList() {
                 <div class="period-color-box" style="background: ${period.tagColor};"></div>
                 <div class="period-details">
                     <span class="period-tag-name">${period.tagName}</span>
-                    <span class="period-dates">${formatDisplayDate(period.startDate)} - ${formatDisplayDate(period.endDate)}</span>
+                    <span class="period-dates">${formatDisplayDate(period.startDate)} - ${formatDisplayDate(period.endDate)} · ${formatPeriodCount(period)}</span>
                 </div>
             </div>
             <div class="period-actions">
@@ -1084,6 +1142,12 @@ function editPeriod(periodId) {
                 <label>Fecha fin:</label>
                 <input type="date" id="editPeriodEnd" value="${period.endDate}" min="${period.startDate}" />
                 
+                <label class="count-mode" for="editPeriodBusinessDays">
+                    <input type="checkbox" id="editPeriodBusinessDays" ${period.countMode === COUNT_MODE_BUSINESS ? 'checked' : ''} />
+                    Contar solo días laborables
+                </label>
+                <span class="count-mode-hint">Excluye sábados y domingos del período</span>
+                
                 <div class="modal-buttons">
                     <button class="btn-primary" onclick="savePeriodEdit('${periodId}')">Guardar</button>
                     <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -1125,7 +1189,7 @@ function savePeriodEdit(periodId) {
         return;
     }
     
-    if (new Date(newStartDate) > new Date(newEndDate)) {
+    if (parseLocalDate(newStartDate) > parseLocalDate(newEndDate)) {
         alert('La fecha de inicio debe ser anterior a la fecha de fin');
         return;
     }
@@ -1133,6 +1197,16 @@ function savePeriodEdit(periodId) {
     const newTag = state.tags.find(t => t.id === newTagId);
     if (!newTag) {
         alert('Por favor, selecciona una etiqueta válida');
+        return;
+    }
+    
+    const newCountMode = document.getElementById('editPeriodBusinessDays').checked
+        ? COUNT_MODE_BUSINESS
+        : COUNT_MODE_NATURAL;
+    const dates = getPeriodDates(newStartDate, newEndDate, newCountMode);
+
+    if (dates.length === 0) {
+        alert('El rango seleccionado no contiene ningún día laborable');
         return;
     }
     
@@ -1145,20 +1219,17 @@ function savePeriodEdit(periodId) {
     period.tagColor = newTag.color;
     period.startDate = newStartDate;
     period.endDate = newEndDate;
+    period.countMode = newCountMode;
     
     // Remarcar los días con el período actualizado
-    let currentDate = new Date(newStartDate);
-    const endDate = new Date(newEndDate);
-    while (currentDate <= endDate) {
-        const dateStr = formatDate(currentDate);
+    dates.forEach(dateStr => {
         const current = Array.isArray(state.markedDays[dateStr]) ? state.markedDays[dateStr] : (state.markedDays[dateStr] ? [state.markedDays[dateStr]] : []);
         const exists = current.some(entry => entry.periodId === periodId);
         if (!exists) {
             current.push({ tagId: newTag.id, color: newTag.color, name: newTag.name, periodId: periodId });
         }
         state.markedDays[dateStr] = current;
-        currentDate.setDate(currentDate.getDate() + 1);
-    }
+    });
     
     closeModal();
     renderPeriodsList();
@@ -1324,7 +1395,7 @@ function loadFromLocalStorage() {
             const parsed = JSON.parse(data);
             state.tags = parsed.tags || [];
             state.markedDays = normalizeMarkedDays(parsed.markedDays || {});
-            state.periods = parsed.periods || [];
+            state.periods = normalizePeriods(parsed.periods);
             state.startMonth = parsed.startMonth || state.startMonth;
             state.monthsCount = parsed.monthsCount || 12;
             state.highlightWeekends = parsed.highlightWeekends || false;
@@ -1386,8 +1457,8 @@ function importData(event) {
             
             if (confirm('¿Deseas reemplazar los datos actuales con los importados?')) {
                 state.tags = data.tags || [];
-                state.markedDays = data.markedDays || {};
-                state.periods = data.periods || [];
+                state.markedDays = normalizeMarkedDays(data.markedDays || {});
+                state.periods = normalizePeriods(data.periods);
                 state.startMonth = data.startMonth || state.startMonth;
                 state.monthsCount = data.monthsCount || 12;
                 

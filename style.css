@@ -683,6 +683,29 @@ button {
     flex: 1;
 }
 
+/* Modo de conteo (naturales / laborables) */
+.count-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+}
+
+.count-mode input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.count-mode-hint {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
 /* Date Selection */
 .date-selection {
     margin-bottom: 15px;
@@ -831,11 +854,13 @@ button {
         font-size: 16px;
     }
 
-    .weekend-option {
+    .weekend-option,
+    .count-mode {
         min-height: var(--touch-target);
     }
 
-    .weekend-option input[type="checkbox"] {
+    .weekend-option input[type="checkbox"],
+    .count-mode input[type="checkbox"] {
         width: 22px;
         height: 22px;
     }
