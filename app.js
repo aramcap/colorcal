@@ -546,6 +546,16 @@ function deleteTag(tagId) {
     saveToLocalStorage();
 }
 
+// Un cambio en los días marcados afecta a tres sitios: el calendario, el
+// contador de días de cada etiqueta y la lista de períodos. Centralizarlo
+// evita que un punto de mutación se deje alguno sin refrescar.
+function refreshMarkedDaysViews() {
+    renderTagsList();
+    renderPeriodsList();
+    renderCalendar();
+    saveToLocalStorage();
+}
+
 function renderTagsList() {
     const container = document.getElementById('tagsList');
     
@@ -644,9 +654,7 @@ function markRange() {
         state.markedDays[dateStr] = current;
     });
     
-    renderPeriodsList();
-    renderCalendar();
-    saveToLocalStorage();
+    refreshMarkedDaysViews();
     
     // Limpiar inputs
     startInput.value = '';
@@ -662,9 +670,7 @@ function clearSelection() {
     
     state.markedDays = {};
     state.periods = [];
-    renderPeriodsList();
-    renderCalendar();
-    saveToLocalStorage();
+    refreshMarkedDaysViews();
 }
 
 // Validar formato de mes (YYYY-MM)
@@ -1232,9 +1238,7 @@ function savePeriodEdit(periodId) {
     });
     
     closeModal();
-    renderPeriodsList();
-    renderCalendar();
-    saveToLocalStorage();
+    refreshMarkedDaysViews();
 }
 
 // Eliminar período
@@ -1249,9 +1253,7 @@ function deletePeriod(periodId) {
     // Eliminar el período de la lista
     state.periods = state.periods.filter(p => p.id !== periodId);
     
-    renderPeriodsList();
-    renderCalendar();
-    saveToLocalStorage();
+    refreshMarkedDaysViews();
 }
 
 // Eliminar marcas de un período específico
