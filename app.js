@@ -189,6 +189,60 @@ function normalizeTagName(name) {
         .replace(/[\u0300-\u036f]/g, '');
 }
 
+// Reapunta a otra etiqueta los períodos y las marcas de una etiqueta que
+// desaparece, adoptando el nombre y el color de la superviviente.
+// targetTag permite pasar la etiqueta superviviente explícitamente: al fusionar
+// durante la carga, state.tags todavía no contiene la lista definitiva.
+function reassignTag(fromId, toId, targetTag) {
+    if (fromId === toId) return;
+
+    const target = targetTag || state.tags.find(tag => tag.id === toId);
+
+    state.periods.forEach(period => {
+        if (period.tagId !== fromId) return;
+        period.tagId = toId;
+        if (target) {
+            period.tagName = target.name;
+            period.tagColor = target.color;
+        }
+    });
+
+    Object.values(state.markedDays).forEach(entries => {
+        entries.forEach(entry => {
+            if (entry.tagId !== fromId) return;
+            entry.tagId = toId;
+            if (target) {
+                entry.color = target.color;
+                entry.name = target.name;
+            }
+        });
+    });
+}
+
+// El nombre identifica a la etiqueta, así que unos datos con nombres repetidos
+// se fusionan al cargarlos: gana la primera y las demás le ceden sus períodos y
+// marcas, en lugar de quedar varias etiquetas indistinguibles en la lista.
+function normalizeTags(raw) {
+    const porNombre = new Map();
+    const resultado = [];
+
+    (raw || []).forEach(tag => {
+        if (!tag || !tag.id) return;
+        const clave = normalizeTagName(tag.name);
+        const previa = porNombre.get(clave);
+
+        if (previa) {
+            reassignTag(tag.id, previa.id, previa);
+            return;
+        }
+
+        porNombre.set(clave, tag);
+        resultado.push(tag);
+    });
+
+    return resultado;
+}
+
 // Garantiza que la etiqueta reservada existe y va la primera de la lista
 function ensureHolidayTag() {
     const existing = state.tags.find(tag => tag.id === HOLIDAY_TAG_ID);
@@ -206,14 +260,7 @@ function ensureHolidayTag() {
         const oldId = sameName.id;
         sameName.id = HOLIDAY_TAG_ID;
         sameName.name = HOLIDAY_TAG_NAME;
-        state.periods.forEach(period => {
-            if (period.tagId === oldId) period.tagId = HOLIDAY_TAG_ID;
-        });
-        Object.values(state.markedDays).forEach(entries => {
-            entries.forEach(entry => {
-                if (entry.tagId === oldId) entry.tagId = HOLIDAY_TAG_ID;
-            });
-        });
+        reassignTag(oldId, HOLIDAY_TAG_ID, sameName);
         state.tags = [sameName, ...state.tags.filter(tag => tag.id !== HOLIDAY_TAG_ID)];
         return sameName;
     }
@@ -1521,6 +1568,11 @@ function saveTagEdit(tagId) {
         return;
     }
     
+    if (state.tags.some(t => t.id !== tagId && normalizeTagName(t.name) === normalizeTagName(newName))) {
+        alert('Ya existe una etiqueta con ese nombre');
+        return;
+    }
+    
     const oldColor = tag.color;
     
     // Actualizar la etiqueta
@@ -1596,9 +1648,11 @@ function loadFromLocalStorage() {
     if (data) {
         try {
             const parsed = JSON.parse(data);
-            state.tags = parsed.tags || [];
+            // markedDays y periods primero: normalizeTags los reapunta al fusionar
+            // etiquetas con el mismo nombre
             state.markedDays = normalizeMarkedDays(parsed.markedDays || {});
             state.periods = normalizePeriods(parsed.periods);
+            state.tags = normalizeTags(parsed.tags);
             state.startMonth = parsed.startMonth || state.startMonth;
             state.monthsCount = parsed.monthsCount || 12;
             state.highlightWeekends = parsed.highlightWeekends || false;
@@ -1663,9 +1717,11 @@ function importData(event) {
             const data = JSON.parse(e.target.result);
             
             if (confirm('¿Deseas reemplazar los datos actuales con los importados?')) {
-                state.tags = data.tags || [];
+                // markedDays y periods primero: normalizeTags los reapunta al
+                // fusionar etiquetas con el mismo nombre
                 state.markedDays = normalizeMarkedDays(data.markedDays || {});
                 state.periods = normalizePeriods(data.periods);
+                state.tags = normalizeTags(data.tags);
                 state.startMonth = data.startMonth || state.startMonth;
                 state.monthsCount = data.monthsCount || 12;
                 ensureHolidayTag();
