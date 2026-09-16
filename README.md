@@ -14,6 +14,9 @@ Colorcal es una aplicación web para visualizar un calendario de varios meses y 
 - Etiqueta reservada «Festivos», siempre presente y no eliminable: sus días se resaltan en rojo
   y no cuentan en los períodos laborables. Se marcan como cualquier otro período.
 - Descripción opcional por período, para distinguir «Navidad» o «Vacaciones de agosto».
+- Carga de los festivos nacionales y autonómicos de la comunidad elegida (2026-2030).
+  Los dos festivos locales de cada municipio no se incluyen y hay que añadirlos a mano;
+  el origen y las limitaciones de los datos están documentados en `holidays-es.js`.
 - Listado y gestión de los períodos marcados.
 - Exportación e importación de datos en formato JSON.
 - Tema claro, oscuro o automático (según preferencia del sistema).

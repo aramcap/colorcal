@@ -95,6 +95,19 @@
                 </div>
             </div>
 
+            <!-- Carga de festivos oficiales -->
+            <div class="section">
+                <h3>Festivos oficiales</h3>
+                <label for="holidayRegion">Comunidad autónoma:</label>
+                <select id="holidayRegion"></select>
+
+                <label for="holidayYear">Año:</label>
+                <select id="holidayYear"></select>
+
+                <button id="loadHolidays" class="btn-primary">Cargar festivos</button>
+                <span class="count-mode-hint">Festivos nacionales y autonómicos. No incluye los dos festivos locales de cada municipio, que debes añadir a mano.</span>
+            </div>
+
             <!-- Lista de períodos marcados -->
             <div class="section">
                 <h3>Períodos Marcados</h3>
@@ -141,6 +154,7 @@
         </div>
     </div>
 
+    <script src="holidays-es.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

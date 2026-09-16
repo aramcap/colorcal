@@ -440,6 +440,7 @@ function initializeApp() {
     renderTagsList();
     renderTagsSelect();
     renderPeriodsList();
+    renderHolidayLoader();
     renderCalendar();
 }
 
@@ -550,6 +551,9 @@ function setupEventListeners() {
     document.getElementById('themeSelector').addEventListener('change', function() {
         applyTheme(this.value);
     });
+    
+    // Festivos oficiales
+    document.getElementById('loadHolidays').addEventListener('click', loadOfficialHolidays);
     
     // Panel lateral en móvil
     document.getElementById('menuToggle').addEventListener('click', toggleSidebar);
@@ -755,6 +759,103 @@ function rebuildBusinessPeriodMarks() {
         });
 }
 
+// ============================================
+// CARGA DE FESTIVOS OFICIALES
+// ============================================
+
+function getHolidayDataset() {
+    return typeof FESTIVOS_ES !== 'undefined' ? FESTIVOS_ES : null;
+}
+
+// Rellena los selectores de comunidad y año a partir del fichero de datos
+function renderHolidayLoader() {
+    const datos = getHolidayDataset();
+    const regionSelect = document.getElementById('holidayRegion');
+    const yearSelect = document.getElementById('holidayYear');
+    const button = document.getElementById('loadHolidays');
+
+    if (!datos) {
+        // Sin el fichero de datos la sección no puede hacer nada
+        regionSelect.innerHTML = '<option value="">-- No disponible --</option>';
+        regionSelect.disabled = true;
+        yearSelect.disabled = true;
+        button.disabled = true;
+        return;
+    }
+
+    const guardada = localStorage.getItem('colorcal-region') || '';
+    regionSelect.innerHTML = '<option value="">-- Seleccionar --</option>' +
+        Object.entries(datos.comunidades)
+            .sort((a, b) => a[1].localeCompare(b[1], 'es'))
+            .map(([cod, nombre]) => `<option value="${cod}"${cod === guardada ? ' selected' : ''}>${escapeHtml(nombre)}</option>`)
+            .join('');
+
+    // Por defecto, el año en el que empieza el calendario mostrado
+    const anios = Object.keys(datos.anios).sort();
+    const actual = String(state.startMonth || '').slice(0, 4);
+    yearSelect.innerHTML = anios
+        .map(a => `<option value="${a}"${a === actual ? ' selected' : ''}>${a}${Number(a) > datos.oficialHasta ? ' (provisional)' : ''}</option>`)
+        .join('');
+}
+
+function loadOfficialHolidays() {
+    const datos = getHolidayDataset();
+    if (!datos) return;
+
+    const region = document.getElementById('holidayRegion').value;
+    const anio = document.getElementById('holidayYear').value;
+
+    if (!region) {
+        alert('Por favor, selecciona una comunidad autónoma');
+        return;
+    }
+
+    const festivos = (datos.anios[anio] || {})[region] || [];
+    if (festivos.length === 0) {
+        alert('No hay datos de festivos para esa comunidad y ese año');
+        return;
+    }
+
+    localStorage.setItem('colorcal-region', region);
+
+    const tag = ensureHolidayTag();
+    let añadidos = 0;
+    let existentes = 0;
+
+    festivos.forEach(([fecha, nombre]) => {
+        if (isHolidayDate(fecha)) {
+            existentes++;
+            return;
+        }
+        const period = {
+            id: `period_${Date.now()}_${añadidos}`,
+            tagId: tag.id,
+            startDate: fecha,
+            endDate: fecha,
+            tagName: tag.name,
+            tagColor: tag.color,
+            countMode: COUNT_MODE_NATURAL,
+            label: nombre
+        };
+        state.periods.push(period);
+        applyPeriodMarks(period);
+        añadidos++;
+    });
+
+    // Los festivos nuevos cambian qué días son laborables para el resto
+    rebuildBusinessPeriodMarks();
+    refreshMarkedDaysViews();
+
+    const provisional = Number(anio) > datos.oficialHasta
+        ? `\n\nEl BOE solo tiene publicada la relación hasta ${datos.oficialHasta}, así que ${anio} es provisional: conviene revisarlo.`
+        : '';
+    const omitidos = existentes > 0 ? `\nSe omitieron ${existentes} que ya estaban marcados.` : '';
+    alert(`Se añadieron ${añadidos} festivos de ${datos.comunidades[region]} para ${anio}.${omitidos}` +
+          `\n\nRecuerda añadir a mano los dos festivos locales de tu municipio.${provisional}`);
+
+    closeSidebarOnMobile();
+}
+
 // Un cambio en los días marcados afecta a tres sitios: el calendario, el
 // contador de días de cada etiqueta y la lista de períodos. Centralizarlo
 // evita que un punto de mutación se deje alguno sin refrescar.
@@ -936,6 +1037,7 @@ function updatePeriod() {
     }
     
     renderCalendar();
+    renderHolidayLoader();
     saveToLocalStorage();
     closeSidebarOnMobile();
 }
