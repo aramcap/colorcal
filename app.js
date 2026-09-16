@@ -1050,18 +1050,28 @@ function renderCalendar() {
         const monthData = [];
         
         Object.entries(state.markedDays).forEach(([date, tags]) => {
-            if (date.startsWith(monthRange)) {
-                const tagArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
-                if (tagArray.length > 0) {
-                    monthData.push({
-                        date: date,
-                        tags: tagArray.map(t => ({
-                            color: t.color || '#3498db',
-                            name: t.name || 'Etiqueta'
-                        }))
-                    });
-                }
+            if (!date.startsWith(monthRange)) return;
+
+            const tagArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
+            if (tagArray.length === 0) return;
+
+            const entries = tagArray.map(t => ({
+                color: t.color || '#3498db',
+                name: t.name || 'Etiqueta'
+            }));
+
+            // Si además es festivo, se añade como una franja más para que la celda
+            // y el tooltip muestren todo lo que afecta a esa fecha. Solo ocurre con
+            // períodos naturales: los laborables ya descartan los festivos.
+            if (isHolidayDate(date)) {
+                const holidayName = getHolidayName(date);
+                entries.unshift({
+                    color: state.holidayColor,
+                    name: holidayName ? `Festivo: ${holidayName}` : 'Festivo'
+                });
             }
+
+            monthData.push({ date: date, tags: entries });
         });
 
         // Crear series scatter para cada etiqueta
@@ -1091,7 +1101,7 @@ function renderCalendar() {
                         tooltip: {
                             formatter: function() {
                                 const lines = item.tags.map(t => 
-                                    `<span style="display:inline-block;width:12px;height:12px;background:${t.color};margin-right:8px;border-radius:2px;vertical-align:middle;"></span>${t.name}`
+                                    `<span style="display:inline-block;width:12px;height:12px;background:${t.color};margin-right:8px;border-radius:2px;vertical-align:middle;"></span>${escapeHtml(t.name)}`
                                 );
                                 return `<strong>${item.date}</strong><br/>` + lines.join('<br/>');
                             }
@@ -1582,6 +1592,7 @@ function normalizeMarkedDays(raw) {
     for (const [date, value] of Object.entries(raw || {})) {
         if (!value) continue;
         if (Array.isArray(value)) {
+            if (value.length === 0) continue;
             normalized[date] = value;
         } else {
             normalized[date] = [value];
