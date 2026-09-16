@@ -11,7 +11,9 @@ Colorcal es una aplicación web para visualizar un calendario de varios meses y 
 - Creación de etiquetas personalizadas con nombre y color.
 - Marcado de rangos de fechas asociados a una etiqueta.
 - Conteo del rango en días naturales o solo laborables, excluyendo sábados y domingos.
-- Días festivos con fecha y nombre, resaltados en rojo y descontados de los períodos laborables.
+- Etiqueta reservada «Festivos», siempre presente y no eliminable: sus días se resaltan en rojo
+  y no cuentan en los períodos laborables. Se marcan como cualquier otro período.
+- Descripción opcional por período, para distinguir «Navidad» o «Vacaciones de agosto».
 - Listado y gestión de los períodos marcados.
 - Exportación e importación de datos en formato JSON.
 - Tema claro, oscuro o automático (según preferencia del sistema).

@@ -402,23 +402,10 @@ button {
 }
 
 /* Weekend option */
-.weekend-option,
-.holiday-color-option {
+.weekend-option {
     display: flex;
     align-items: center;
     gap: 10px;
-}
-
-.holiday-color-option label {
-    flex: 1;
-    margin-bottom: 0;
-}
-
-.holiday-color-option input[type="color"] {
-    width: 40px;
-    height: 30px;
-    margin-bottom: 0;
-    flex-shrink: 0;
 }
 
 .weekend-option label {
@@ -541,74 +528,12 @@ button {
     flex-shrink: 0;
 }
 
-/* Festivos */
-.holiday-form {
-    display: flex;
-    flex-direction: column;
-}
-
-.holidays-list {
-    margin-top: 15px;
-    max-height: 200px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-}
-
-.holiday-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px;
-    margin-bottom: 8px;
-    background: var(--bg-sidebar-item);
-    border-radius: 4px;
-    transition: background-color 0.3s ease;
-}
-
-.holiday-info {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    flex: 1;
-}
-
-.holiday-date {
-    font-size: 13px;
-    font-weight: bold;
-    color: var(--text-sidebar);
-}
-
-.holiday-name {
-    font-size: 11px;
-    color: var(--text-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.holiday-delete {
-    background: transparent;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 14px;
-    width: auto;
-    min-width: 28px;
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 0;
-    transition: background 0.2s;
-}
-
-.holiday-delete:hover {
-    background: rgba(239, 68, 68, 0.3);
-}
-
 /* Periods List */
+.period-label {
+    font-weight: normal;
+    color: var(--text-light);
+}
+
 .periods-list {
     margin-top: 10px;
     max-height: 250px;
@@ -928,15 +853,13 @@ button {
     .tag-delete,
     .tag-edit,
     .period-edit,
-    .period-delete,
-    .holiday-delete {
+    .period-delete {
         min-width: 40px;
         min-height: 40px;
         font-size: 16px;
     }
 
     .weekend-option,
-    .holiday-color-option,
     .count-mode {
         min-height: var(--touch-target);
     }
@@ -947,8 +870,7 @@ button {
         height: 22px;
     }
 
-    .weekend-option input[type="color"],
-    .holiday-color-option input[type="color"] {
+    .weekend-option input[type="color"] {
         width: 48px;
         height: 36px;
     }
@@ -983,8 +905,7 @@ button {
     .tag-delete:hover { background: var(--accent-danger); }
     .tag-edit:hover,
     .period-edit:hover,
-    .period-delete:hover,
-    .holiday-delete:hover { background: transparent; }
+    .period-delete:hover { background: transparent; }
 
     .btn-primary:active { background: var(--accent-primary-hover); }
     .btn-secondary:active { background: var(--accent-secondary-hover); }
@@ -992,8 +913,7 @@ button {
     .tag-delete:active { background: var(--accent-danger-hover); }
     .tag-edit:active,
     .period-edit:active { background: rgba(99, 102, 241, 0.3); }
-    .period-delete:active,
-    .holiday-delete:active { background: rgba(239, 68, 68, 0.3); }
+    .period-delete:active { background: rgba(239, 68, 68, 0.3); }
 }
 
 /* Respetar la preferencia de movimiento reducido */

@@ -56,23 +56,6 @@
                 </div>
             </div>
 
-            <!-- Festivos -->
-            <div class="section">
-                <h3>Festivos</h3>
-                <div class="holiday-form">
-                    <input type="date" id="holidayDate" aria-label="Fecha del festivo" />
-                    <input type="text" id="holidayName" placeholder="Nombre (opcional)" aria-label="Nombre del festivo" autocomplete="off" />
-                    <button id="addHoliday" class="btn-primary">Añadir festivo</button>
-                </div>
-
-                <div class="holiday-color-option">
-                    <label for="holidayColor">Color de los festivos</label>
-                    <input type="color" id="holidayColor" value="#e74c3c" aria-label="Color de los festivos" />
-                </div>
-
-                <div id="holidaysList" class="holidays-list"></div>
-            </div>
-
             <!-- Gestión de etiquetas -->
             <div class="section">
                 <h3>Etiquetas</h3>
@@ -99,11 +82,14 @@
                     <label for="endDate">Fecha fin:</label>
                     <input type="date" id="endDate" />
 
+                    <label for="periodLabel">Descripción (opcional):</label>
+                    <input type="text" id="periodLabel" placeholder="Ej.: Navidad" autocomplete="off" />
+
                     <label class="count-mode" for="businessDaysOnly">
                         <input type="checkbox" id="businessDaysOnly" />
                         Contar solo días laborables
                     </label>
-                    <span class="count-mode-hint">Excluye sábados y domingos del período</span>
+                    <span class="count-mode-hint">Excluye sábados, domingos y festivos del período</span>
 
                     <button id="markRange" class="btn-secondary">Marcar</button>
                 </div>

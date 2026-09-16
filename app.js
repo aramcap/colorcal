@@ -114,12 +114,53 @@ function normalizeCountMode(value) {
     return value === COUNT_MODE_BUSINESS ? COUNT_MODE_BUSINESS : COUNT_MODE_NATURAL;
 }
 
-// Los períodos guardados antes de existir esta opción se consideran naturales
+// Los períodos guardados antes de existir esta opción se consideran naturales.
+// Los de la etiqueta reservada lo son siempre: si contasen en modo laborable se
+// excluirían a sí mismos, porque sus días son justo los que hay que descartar.
+function resolveCountMode(tagId, countMode) {
+    return isHolidayTag(tagId) ? COUNT_MODE_NATURAL : normalizeCountMode(countMode);
+}
+
 function normalizePeriods(raw) {
     return (raw || []).map(period => ({
         ...period,
-        countMode: normalizeCountMode(period.countMode)
+        countMode: resolveCountMode(period.tagId, period.countMode),
+        label: period.label ? String(period.label) : ''
     }));
+}
+
+// Convierte el formato antiguo (state.holidays) en períodos de la etiqueta
+// reservada. Se ejecuta al cargar y al importar, una sola vez por conjunto de datos.
+function migrateLegacyHolidays(rawHolidays, rawHolidayColor) {
+    const porFecha = new Map();
+    (rawHolidays || []).forEach(item => {
+        const date = typeof item === 'string' ? item : (item && item.date);
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+        const name = (typeof item === 'object' && item && item.name ? String(item.name) : '').trim();
+        porFecha.set(date, name);
+    });
+
+    if (porFecha.size === 0) return;
+
+    const tag = ensureHolidayTag();
+    if (rawHolidayColor) tag.color = rawHolidayColor;
+
+    [...porFecha.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .forEach(([date, name], index) => {
+            const period = {
+                id: `period_legacy_${index}_${date}`,
+                tagId: tag.id,
+                startDate: date,
+                endDate: date,
+                tagName: tag.name,
+                tagColor: tag.color,
+                countMode: COUNT_MODE_NATURAL,
+                label: name
+            };
+            state.periods.push(period);
+            applyPeriodMarks(period);
+        });
 }
 
 // Escapa texto que se inserta como HTML (los nombres pueden venir de un JSON importado)
@@ -129,25 +170,67 @@ function escapeHtml(text) {
     })[ch]);
 }
 
-// Descarta entradas inválidas o duplicadas y ordena por fecha
-function normalizeHolidays(raw) {
-    const porFecha = new Map();
-    (raw || []).forEach(item => {
-        const date = typeof item === 'string' ? item : (item && item.date);
-        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-        const name = (typeof item === 'object' && item && item.name ? String(item.name) : '').trim();
-        porFecha.set(date, { date, name });
-    });
-    return [...porFecha.values()].sort((a, b) => a.date.localeCompare(b.date));
+// Los festivos son una etiqueta más, pero reservada: existe siempre, no se puede
+// eliminar ni renombrar, y sus días no cuentan como laborables.
+const HOLIDAY_TAG_ID = 'tag_holidays';
+const HOLIDAY_TAG_NAME = 'Festivos';
+const HOLIDAY_TAG_COLOR = '#e74c3c';
+
+function isHolidayTag(tagId) {
+    return tagId === HOLIDAY_TAG_ID;
 }
 
+// Compara nombres ignorando mayúsculas y acentos, para impedir duplicados
+function normalizeTagName(name) {
+    return String(name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+}
+
+// Garantiza que la etiqueta reservada existe y va la primera de la lista
+function ensureHolidayTag() {
+    const existing = state.tags.find(tag => tag.id === HOLIDAY_TAG_ID);
+
+    if (existing) {
+        existing.name = HOLIDAY_TAG_NAME;
+        state.tags = [existing, ...state.tags.filter(tag => tag.id !== HOLIDAY_TAG_ID)];
+        return existing;
+    }
+
+    // Una etiqueta importada que se llame igual pasa a ser la reservada, para no
+    // acabar con dos "Festivos" en la lista
+    const sameName = state.tags.find(tag => normalizeTagName(tag.name) === normalizeTagName(HOLIDAY_TAG_NAME));
+    if (sameName) {
+        const oldId = sameName.id;
+        sameName.id = HOLIDAY_TAG_ID;
+        sameName.name = HOLIDAY_TAG_NAME;
+        state.periods.forEach(period => {
+            if (period.tagId === oldId) period.tagId = HOLIDAY_TAG_ID;
+        });
+        Object.values(state.markedDays).forEach(entries => {
+            entries.forEach(entry => {
+                if (entry.tagId === oldId) entry.tagId = HOLIDAY_TAG_ID;
+            });
+        });
+        state.tags = [sameName, ...state.tags.filter(tag => tag.id !== HOLIDAY_TAG_ID)];
+        return sameName;
+    }
+
+    const tag = { id: HOLIDAY_TAG_ID, name: HOLIDAY_TAG_NAME, color: HOLIDAY_TAG_COLOR };
+    state.tags = [tag, ...state.tags];
+    return tag;
+}
+
+function getHolidayTag() {
+    return state.tags.find(tag => tag.id === HOLIDAY_TAG_ID);
+}
+
+// Un día es festivo si lo marca la etiqueta reservada
 function isHolidayDate(dateStr) {
-    return state.holidays.some(holiday => holiday.date === dateStr);
-}
-
-function getHolidayName(dateStr) {
-    const holiday = state.holidays.find(h => h.date === dateStr);
-    return holiday ? holiday.name : '';
+    const entries = state.markedDays[dateStr];
+    return Array.isArray(entries) && entries.some(entry => isHolidayTag(entry.tagId));
 }
 
 // Días que no cuentan como laborables: fines de semana y festivos
@@ -214,14 +297,12 @@ function getDayBackgroundColor(date, markedDays) {
 const state = {
     tags: [],
     markedDays: {}, // { "2024-01-15": { tagId: "tag1", color: "#3498db", name: "Vacaciones" } }
-    periods: [], // { id: "period_123", tagId: "tag1", startDate: "2024-01-15", endDate: "2024-01-20", tagName: "Vacaciones", tagColor: "#3498db" }
+    periods: [], // { id: "period_123", tagId: "tag1", startDate: "2024-01-15", endDate: "2024-01-20", tagName: "Vacaciones", tagColor: "#3498db", countMode: "natural", label: "" }
     startMonth: null,
     monthsCount: 12,
     chart: null,
     highlightWeekends: false,
     weekendColor: '#ffcccc',
-    holidays: [], // [{ date: "2026-01-01", name: "Año Nuevo" }]
-    holidayColor: '#e74c3c',
     isPrinting: false,
     chartPixelRatio: null,
     lastRenderWidth: 0
@@ -305,11 +386,13 @@ function initializeApp() {
     // Cargar datos guardados
     loadFromLocalStorage();
     
+    // La etiqueta reservada existe siempre, haya datos guardados o no
+    ensureHolidayTag();
+    
     // Renderizar interfaz
     renderTagsList();
     renderTagsSelect();
     renderPeriodsList();
-    renderHolidaysList();
     renderCalendar();
 }
 
@@ -354,14 +437,6 @@ function setupEventListeners() {
         saveToLocalStorage();
         renderCalendar();
     });
-    // Festivos
-    document.getElementById('addHoliday').addEventListener('click', addHoliday);
-    document.getElementById('holidayColor').addEventListener('change', function() {
-        state.holidayColor = this.value;
-        saveToLocalStorage();
-        renderCalendar();
-    });
-    
     document.getElementById('weekendColor').addEventListener('change', function() {
         state.weekendColor = this.value;
         if (state.highlightWeekends) {
@@ -508,17 +583,6 @@ function generatePrintLegend() {
         legendContent.appendChild(item);
     });
     
-    // Añadir festivos si hay alguno
-    if (state.holidays.length > 0) {
-        const holidayItem = document.createElement('div');
-        holidayItem.className = 'legend-item';
-        holidayItem.innerHTML = `
-            <span class="legend-color" style="background-color: ${state.holidayColor};"></span>
-            <span class="legend-name">Festivo</span>
-        `;
-        legendContent.appendChild(holidayItem);
-    }
-    
     // Añadir fines de semana si está activado
     if (state.highlightWeekends) {
         const weekendItem = document.createElement('div');
@@ -563,6 +627,16 @@ function addTag() {
         return;
     }
     
+    if (normalizeTagName(name) === normalizeTagName(HOLIDAY_TAG_NAME)) {
+        alert(`"${HOLIDAY_TAG_NAME}" es una etiqueta reservada que ya existe. Marca los días festivos seleccionándola en "Marcar días".`);
+        return;
+    }
+    
+    if (state.tags.some(t => normalizeTagName(t.name) === normalizeTagName(name))) {
+        alert('Ya existe una etiqueta con ese nombre');
+        return;
+    }
+    
     const tag = {
         id: `tag_${Date.now()}`,
         name: name,
@@ -582,6 +656,11 @@ function addTag() {
 }
 
 function deleteTag(tagId) {
+    if (isHolidayTag(tagId)) {
+        alert(`La etiqueta "${HOLIDAY_TAG_NAME}" no se puede eliminar. Puedes borrar sus períodos uno a uno.`);
+        return;
+    }
+    
     if (!confirm('¿Estás seguro de eliminar esta etiqueta? Los días y períodos marcados con esta etiqueta se eliminarán.')) {
         return;
     }
@@ -629,58 +708,6 @@ function rebuildBusinessPeriodMarks() {
         });
 }
 
-function addHoliday() {
-    const dateInput = document.getElementById('holidayDate');
-    const nameInput = document.getElementById('holidayName');
-    const date = dateInput.value;
-
-    if (!date) {
-        alert('Por favor, selecciona la fecha del festivo');
-        return;
-    }
-
-    if (isHolidayDate(date)) {
-        alert('Esa fecha ya está marcada como festivo');
-        return;
-    }
-
-    state.holidays = normalizeHolidays([...state.holidays, { date, name: nameInput.value.trim() }]);
-
-    dateInput.value = '';
-    nameInput.value = '';
-
-    rebuildBusinessPeriodMarks();
-    renderHolidaysList();
-    refreshMarkedDaysViews();
-}
-
-function deleteHoliday(date) {
-    state.holidays = state.holidays.filter(holiday => holiday.date !== date);
-
-    rebuildBusinessPeriodMarks();
-    renderHolidaysList();
-    refreshMarkedDaysViews();
-}
-
-function renderHolidaysList() {
-    const container = document.getElementById('holidaysList');
-
-    if (state.holidays.length === 0) {
-        container.innerHTML = '<p class="empty-message">No hay festivos</p>';
-        return;
-    }
-
-    container.innerHTML = state.holidays.map(holiday => `
-        <div class="holiday-item">
-            <div class="holiday-info">
-                <span class="holiday-date">${formatDisplayDate(holiday.date)}</span>
-                ${holiday.name ? `<span class="holiday-name">${escapeHtml(holiday.name)}</span>` : ''}
-            </div>
-            <button class="holiday-delete" onclick="deleteHoliday('${holiday.date}')" title="Eliminar festivo" aria-label="Eliminar festivo">🗑️</button>
-        </div>
-    `).join('');
-}
-
 // Un cambio en los días marcados afecta a tres sitios: el calendario, el
 // contador de días de cada etiqueta y la lista de períodos. Centralizarlo
 // evita que un punto de mutación se deje alguno sin refrescar.
@@ -706,12 +733,12 @@ function renderTagsList() {
         <div class="tag-item">
             <div class="tag-info">
                 <div class="tag-color-box" style="background: ${tag.color};"></div>
-                <span class="tag-name">${tag.name}</span>
+                <span class="tag-name">${escapeHtml(tag.name)}</span>
                 <span class="tag-day-count">(${dayText})</span>
             </div>
             <div class="tag-actions">
-                <button class="tag-edit" onclick="editTag('${tag.id}')" title="Editar etiqueta" aria-label="Editar">✏️</button>
-                <button class="tag-delete" onclick="deleteTag('${tag.id}')" aria-label="Eliminar">🗑️</button>
+                <button class="tag-edit" onclick="editTag('${tag.id}')" title="${isHolidayTag(tag.id) ? 'Editar color' : 'Editar etiqueta'}" aria-label="Editar">✏️</button>
+                ${isHolidayTag(tag.id) ? '' : `<button class="tag-delete" onclick="deleteTag('${tag.id}')" aria-label="Eliminar">🗑️</button>`}
             </div>
         </div>
     `;
@@ -728,7 +755,7 @@ function renderTagsSelect() {
     
     select.innerHTML = '<option value="">-- Seleccionar --</option>' + 
         state.tags.map(tag => `
-            <option value="${tag.id}">${tag.name}</option>
+            <option value="${tag.id}">${escapeHtml(tag.name)}</option>
         `).join('');
 }
 
@@ -755,9 +782,9 @@ function markRange() {
         return;
     }
     
-    const countMode = document.getElementById('businessDaysOnly').checked
+    const countMode = resolveCountMode(tagId, document.getElementById('businessDaysOnly').checked
         ? COUNT_MODE_BUSINESS
-        : COUNT_MODE_NATURAL;
+        : COUNT_MODE_NATURAL);
     const dates = getPeriodDates(startInput.value, endInput.value, countMode);
 
     if (dates.length === 0) {
@@ -775,7 +802,8 @@ function markRange() {
         endDate: endInput.value,
         tagName: tag.name,
         tagColor: tag.color,
-        countMode: countMode
+        countMode: countMode,
+        label: document.getElementById('periodLabel').value.trim()
     };
     state.periods.push(period);
     
@@ -789,17 +817,23 @@ function markRange() {
         state.markedDays[dateStr] = current;
     });
     
+    // Un período de festivos cambia qué días son laborables para los demás
+    if (isHolidayTag(tag.id)) {
+        rebuildBusinessPeriodMarks();
+    }
+    
     refreshMarkedDaysViews();
     
     // Limpiar inputs
     startInput.value = '';
     endInput.value = '';
+    document.getElementById('periodLabel').value = '';
 
     closeSidebarOnMobile();
 }
 
 function clearSelection() {
-    if (!confirm('¿Estás seguro de limpiar todos los días marcados?')) {
+    if (!confirm('¿Estás seguro de limpiar todos los días marcados? También se eliminarán los períodos de festivos.')) {
         return;
     }
     
@@ -1055,21 +1089,17 @@ function renderCalendar() {
             const tagArray = Array.isArray(tags) ? tags : (tags ? [tags] : []);
             if (tagArray.length === 0) return;
 
-            const entries = tagArray.map(t => ({
-                color: t.color || '#3498db',
-                name: t.name || 'Etiqueta'
-            }));
-
-            // Si además es festivo, se añade como una franja más para que la celda
-            // y el tooltip muestren todo lo que afecta a esa fecha. Solo ocurre con
-            // períodos naturales: los laborables ya descartan los festivos.
-            if (isHolidayDate(date)) {
-                const holidayName = getHolidayName(date);
-                entries.unshift({
-                    color: state.holidayColor,
-                    name: holidayName ? `Festivo: ${holidayName}` : 'Festivo'
-                });
-            }
+            const entries = tagArray.map(t => {
+                // La descripción del período, si la tiene, matiza el nombre de la
+                // etiqueta: "Festivos — Navidad", "Vacaciones — agosto"
+                const period = state.periods.find(p => p.id === t.periodId);
+                const label = period && period.label ? period.label : '';
+                const name = t.name || 'Etiqueta';
+                return {
+                    color: t.color || '#3498db',
+                    name: label ? `${name} — ${label}` : name
+                };
+            });
 
             monthData.push({ date: date, tags: entries });
         });
@@ -1117,7 +1147,6 @@ function renderCalendar() {
             // Prioridad de fondo: período marcado > festivo > fin de semana
             const isWeekend = isWeekendDate(parseLocalDate(d));
             const effectiveBgColor = bgColor
-                || (isHolidayDate(d) ? state.holidayColor : null)
                 || (state.highlightWeekends && isWeekend ? state.weekendColor : null);
             const textColor = effectiveBgColor ? getContrastColor(effectiveBgColor) : themeColors.textPrimary;
             return {
@@ -1128,37 +1157,10 @@ function renderCalendar() {
             };
         });
         
-        // Serie para colorear festivos (por encima del fin de semana, por debajo
-        // de los días marcados por un período)
-        const holidayDays = getDaysOfMonth(adjustedYear, adjustedMonth)
-            .filter(d => isHolidayDate(d) && !state.markedDays[d]);
-
-        if (holidayDays.length > 0) {
-            series.push({
-                type: 'scatter',
-                coordinateSystem: 'calendar',
-                calendarIndex: i,
-                data: holidayDays.map(d => [d, 1]),
-                z: 6,
-                symbol: 'rect',
-                symbolSize: [cellWidthPx - 2, cellHeightPx - 2],
-                itemStyle: {
-                    color: state.holidayColor
-                },
-                tooltip: {
-                    formatter: params => {
-                        const fecha = params.value[0];
-                        const nombre = getHolidayName(fecha);
-                        return `<strong>${fecha}</strong><br/>Festivo${nombre ? ': ' + escapeHtml(nombre) : ''}`;
-                    }
-                }
-            });
-        }
-
         // Serie para colorear fines de semana (si está activado)
         if (state.highlightWeekends) {
             const weekendDays = getDaysOfMonth(adjustedYear, adjustedMonth).filter(d => {
-                return isWeekendDate(parseLocalDate(d)) && !state.markedDays[d] && !isHolidayDate(d);
+                return isWeekendDate(parseLocalDate(d)) && !state.markedDays[d];
             });
             
             if (weekendDays.length > 0) {
@@ -1278,7 +1280,7 @@ function renderPeriodsList() {
             <div class="period-info">
                 <div class="period-color-box" style="background: ${period.tagColor};"></div>
                 <div class="period-details">
-                    <span class="period-tag-name">${period.tagName}</span>
+                    <span class="period-tag-name">${escapeHtml(period.tagName)}${period.label ? ` <span class="period-label">${escapeHtml(period.label)}</span>` : ''}</span>
                     <span class="period-dates">${formatDisplayDate(period.startDate)} - ${formatDisplayDate(period.endDate)} · ${formatPeriodCount(period)}</span>
                 </div>
             </div>
@@ -1322,11 +1324,14 @@ function editPeriod(periodId) {
                 <label>Fecha fin:</label>
                 <input type="date" id="editPeriodEnd" value="${period.endDate}" min="${period.startDate}" />
                 
+                <label for="editPeriodLabel">Descripción (opcional):</label>
+                <input type="text" id="editPeriodLabel" value="${escapeHtml(period.label || '')}" placeholder="Ej.: Navidad" autocomplete="off" />
+                
                 <label class="count-mode" for="editPeriodBusinessDays">
-                    <input type="checkbox" id="editPeriodBusinessDays" ${period.countMode === COUNT_MODE_BUSINESS ? 'checked' : ''} />
+                    <input type="checkbox" id="editPeriodBusinessDays" ${period.countMode === COUNT_MODE_BUSINESS ? 'checked' : ''} ${isHolidayTag(period.tagId) ? 'disabled' : ''} />
                     Contar solo días laborables
                 </label>
-                <span class="count-mode-hint">Excluye sábados y domingos del período</span>
+                <span class="count-mode-hint">${isHolidayTag(period.tagId) ? `Los períodos de "${HOLIDAY_TAG_NAME}" cuentan siempre en días naturales` : 'Excluye sábados, domingos y festivos del período'}</span>
                 
                 <div class="modal-buttons">
                     <button class="btn-primary" onclick="savePeriodEdit('${periodId}')">Guardar</button>
@@ -1380,9 +1385,9 @@ function savePeriodEdit(periodId) {
         return;
     }
     
-    const newCountMode = document.getElementById('editPeriodBusinessDays').checked
+    const newCountMode = resolveCountMode(newTag.id, document.getElementById('editPeriodBusinessDays').checked
         ? COUNT_MODE_BUSINESS
-        : COUNT_MODE_NATURAL;
+        : COUNT_MODE_NATURAL);
     const dates = getPeriodDates(newStartDate, newEndDate, newCountMode);
 
     if (dates.length === 0) {
@@ -1391,6 +1396,7 @@ function savePeriodEdit(periodId) {
     }
     
     // Eliminar las marcas del período antiguo
+    const previousTagId = period.tagId;
     removePeriodMarks(periodId);
     
     // Actualizar el período
@@ -1400,9 +1406,15 @@ function savePeriodEdit(periodId) {
     period.startDate = newStartDate;
     period.endDate = newEndDate;
     period.countMode = newCountMode;
+    period.label = document.getElementById('editPeriodLabel').value.trim();
     
     // Remarcar los días con el período actualizado
     applyPeriodMarks(period);
+    
+    // Si toca a los festivos, el resto de períodos laborables cambia
+    if (isHolidayTag(period.tagId) || isHolidayTag(previousTagId)) {
+        rebuildBusinessPeriodMarks();
+    }
     
     closeModal();
     refreshMarkedDaysViews();
@@ -1414,11 +1426,18 @@ function deletePeriod(periodId) {
         return;
     }
     
+    const period = state.periods.find(p => p.id === periodId);
+    
     // Eliminar las marcas del período
     removePeriodMarks(periodId);
     
     // Eliminar el período de la lista
     state.periods = state.periods.filter(p => p.id !== periodId);
+    
+    // Quitar un festivo devuelve ese día a los períodos laborables
+    if (period && isHolidayTag(period.tagId)) {
+        rebuildBusinessPeriodMarks();
+    }
     
     refreshMarkedDaysViews();
 }
@@ -1459,7 +1478,8 @@ function editTag(tagId) {
             <h3>Editar Etiqueta</h3>
             <div class="modal-form">
                 <label>Nombre:</label>
-                <input type="text" id="editTagName" value="${tag.name}" />
+                <input type="text" id="editTagName" value="${escapeHtml(tag.name)}" ${isHolidayTag(tagId) ? 'disabled' : ''} />
+                ${isHolidayTag(tagId) ? `<span class="count-mode-hint">"${HOLIDAY_TAG_NAME}" es una etiqueta reservada: solo puedes cambiar su color</span>` : ''}
                 
                 <label>Color:</label>
                 <input type="color" id="editTagColor" value="${tag.color}" />
@@ -1479,11 +1499,16 @@ function saveTagEdit(tagId) {
     const tag = state.tags.find(t => t.id === tagId);
     if (!tag) return;
     
-    const newName = document.getElementById('editTagName').value.trim();
     const newColor = document.getElementById('editTagColor').value;
+    const newName = isHolidayTag(tagId) ? HOLIDAY_TAG_NAME : document.getElementById('editTagName').value.trim();
     
     if (!newName) {
         alert('Por favor, ingresa un nombre para la etiqueta');
+        return;
+    }
+    
+    if (!isHolidayTag(tagId) && normalizeTagName(newName) === normalizeTagName(HOLIDAY_TAG_NAME)) {
+        alert(`"${HOLIDAY_TAG_NAME}" es una etiqueta reservada. Elige otro nombre.`);
         return;
     }
     
@@ -1552,9 +1577,7 @@ function saveToLocalStorage() {
         startMonth: state.startMonth,
         monthsCount: state.monthsCount,
         highlightWeekends: state.highlightWeekends,
-        weekendColor: state.weekendColor,
-        holidays: state.holidays,
-        holidayColor: state.holidayColor
+        weekendColor: state.weekendColor
     };
     localStorage.setItem('calendarData', JSON.stringify(data));
 }
@@ -1571,15 +1594,15 @@ function loadFromLocalStorage() {
             state.monthsCount = parsed.monthsCount || 12;
             state.highlightWeekends = parsed.highlightWeekends || false;
             state.weekendColor = parsed.weekendColor || '#ffcccc';
-            state.holidays = normalizeHolidays(parsed.holidays);
-            state.holidayColor = parsed.holidayColor || '#e74c3c';
+            ensureHolidayTag();
+            migrateLegacyHolidays(parsed.holidays, parsed.holidayColor);
+            rebuildBusinessPeriodMarks();
             
             // Actualizar inputs
             document.getElementById('startMonth').value = state.startMonth;
             document.getElementById('monthsCount').value = state.monthsCount;
             document.getElementById('highlightWeekends').checked = state.highlightWeekends;
             document.getElementById('weekendColor').value = state.weekendColor;
-            document.getElementById('holidayColor').value = state.holidayColor;
         } catch (e) {
             console.error('Error al cargar datos:', e);
         }
@@ -1609,8 +1632,6 @@ function exportData() {
         periods: state.periods,
         startMonth: state.startMonth,
         monthsCount: state.monthsCount,
-        holidays: state.holidays,
-        holidayColor: state.holidayColor,
         exportDate: new Date().toISOString()
     };
     
@@ -1638,15 +1659,14 @@ function importData(event) {
                 state.periods = normalizePeriods(data.periods);
                 state.startMonth = data.startMonth || state.startMonth;
                 state.monthsCount = data.monthsCount || 12;
-                state.holidays = normalizeHolidays(data.holidays);
-                state.holidayColor = data.holidayColor || state.holidayColor;
+                ensureHolidayTag();
+                migrateLegacyHolidays(data.holidays, data.holidayColor);
+                rebuildBusinessPeriodMarks();
                 
                 // Actualizar interfaz
                 document.getElementById('startMonth').value = state.startMonth;
                 document.getElementById('monthsCount').value = state.monthsCount;
-                document.getElementById('holidayColor').value = state.holidayColor;
                 
-                renderHolidaysList();
                 renderTagsList();
                 renderTagsSelect();
                 renderPeriodsList();
