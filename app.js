@@ -243,7 +243,8 @@ function normalizeTags(raw) {
     return resultado;
 }
 
-// Garantiza que la etiqueta reservada existe y va la primera de la lista
+// Garantiza que la etiqueta reservada existe. La deja al frente de state.tags,
+// aunque en pantalla el orden lo decide getSortedTags().
 function ensureHolidayTag() {
     const existing = state.tags.find(tag => tag.id === HOLIDAY_TAG_ID);
 
@@ -765,6 +766,15 @@ function refreshMarkedDaysViews() {
     saveToLocalStorage();
 }
 
+// Orden alfabético en español, para que ñ y acentos caigan donde se espera.
+// Se ordena al pintar, no en state.tags: es presentación, y así el orden se
+// recalcula solo al renombrar una etiqueta.
+function getSortedTags() {
+    return [...state.tags].sort((a, b) =>
+        a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+    );
+}
+
 function renderTagsList() {
     const container = document.getElementById('tagsList');
     
@@ -773,7 +783,7 @@ function renderTagsList() {
         return;
     }
     
-    container.innerHTML = state.tags.map(tag => {
+    container.innerHTML = getSortedTags().map(tag => {
         const dayCount = countDaysForTag(tag.id);
         const dayText = dayCount === 1 ? '1 día' : `${dayCount} días`;
         return `
@@ -801,7 +811,7 @@ function renderTagsSelect() {
     }
     
     select.innerHTML = '<option value="">-- Seleccionar --</option>' + 
-        state.tags.map(tag => `
+        getSortedTags().map(tag => `
             <option value="${tag.id}">${escapeHtml(tag.name)}</option>
         `).join('');
 }
