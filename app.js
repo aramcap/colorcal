@@ -1275,7 +1275,16 @@ function renderPeriodsList() {
         return;
     }
     
-    container.innerHTML = state.periods.map(period => `
+    // Se ordena al pintar, no en state.periods: es una cuestión de presentación y
+    // así el orden se mantiene correcto al editar las fechas de un período.
+    // Las fechas son YYYY-MM-DD, por lo que el orden alfabético es el cronológico.
+    const ordenados = [...state.periods].sort((a, b) =>
+        a.startDate.localeCompare(b.startDate)
+        || a.endDate.localeCompare(b.endDate)
+        || a.tagName.localeCompare(b.tagName, 'es')
+    );
+
+    container.innerHTML = ordenados.map(period => `
         <div class="period-item" data-id="${period.id}">
             <div class="period-info">
                 <div class="period-color-box" style="background: ${period.tagColor};"></div>
