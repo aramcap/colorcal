@@ -1032,18 +1032,20 @@ button {
         height: auto !important;
         overflow: visible;
         padding: 0;
+        background: none !important;
     }
 
+    /* El ancho lo fija prepareForPrint con un estilo en línea, para que el
+       lienzo salga ya al tamaño del papel. Aquí no se sobrescribe. */
     #calendar {
-        width: 100%;
         height: auto !important;
         min-height: auto !important;
     }
 
     .print-legend {
         display: block;
-        margin-top: 20px;
-        padding: 15px;
+        margin-top: 10px;
+        padding: 10px 0 0;
         border-top: 2px solid #333;
         page-break-inside: avoid;
     }
@@ -1056,11 +1058,11 @@ button {
 
     .print-footer {
         display: block !important;
-        margin-top: 30px;
-        padding-top: 15px;
+        margin-top: 12px;
+        padding-top: 10px;
         border-top: 1px solid #ccc;
         text-align: center;
-        font-size: 16px;
+        font-size: 12px;
         color: #666;
         page-break-inside: avoid;
     }
