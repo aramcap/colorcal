@@ -594,25 +594,39 @@ function setupEventListeners() {
 // Preparar para impresión: forzar tema claro y re-renderizar
 function prepareForPrint() {
     state.isPrinting = true;
-    // Re-renderizar calendario con colores claros
-    if (state.chart) {
-        renderCalendar();
+
+    // El evento beforeprint se dispara antes de que el navegador recomponga la
+    // página al ancho del papel, así que el contenedor mediría todavía el ancho
+    // de la ventana y el lienzo saldría cortado. Se fija un ancho conocido solo
+    // mientras se dibuja, con prioridad para ganar al width del CSS de
+    // impresión, y se libera después para que el lienzo, ya con su tamaño
+    // propio, lo escale el CSS al ancho real de la página.
+    const container = document.getElementById('calendar');
+    if (container) {
+        container.style.setProperty('width', `${PRINT_WIDTH_PX}px`, 'important');
     }
-    // Generar leyenda
+
+    renderCalendar();
+
+    if (container) {
+        container.style.removeProperty('width');
+    }
+
     generatePrintLegend();
 }
 
 // Restaurar después de imprimir
 function restoreAfterPrint() {
     state.isPrinting = false;
+
+    const container = document.getElementById('calendar');
+    if (container) {
+        container.style.width = '';
+    }
+
     // Pequeño delay para permitir que el layout se restaure completamente
     setTimeout(() => {
-        // Re-renderizar calendario con colores del tema actual
-        if (state.chart) {
-            // Forzar resize para recalcular dimensiones correctas
-            state.chart.resize();
-            renderCalendar();
-        }
+        renderCalendar();
     }, 100);
 }
 
@@ -1042,6 +1056,11 @@ function updatePeriod() {
     closeSidebarOnMobile();
 }
 
+// Ancho lógico con el que se dibuja el calendario al imprimir. Equivale al área
+// útil de un A4 vertical con márgenes normales; el CSS de impresión escala el
+// lienzo al ancho real de la página, que variará algo según los márgenes.
+const PRINT_WIDTH_PX = 760;
+
 // Límites prácticos del elemento <canvas> en navegadores móviles. Un calendario de
 // muchos meses en una sola columna puede superarlos y quedarse en blanco, así que
 // ajustamos la densidad de píxeles al tamaño real del lienzo.
@@ -1078,6 +1097,30 @@ function ensureChart(container, widthPx, heightPx) {
 // número de columnas y se agrandan celdas y tipografías para que el calendario
 // siga siendo legible.
 function getCalendarLayout(containerWidth, monthsCount) {
+    // Al imprimir, el ancho no lo decide la pantalla sino el papel, así que se
+    // fijan tres columnas (la disposición clásica de un calendario anual en A4)
+    // y métricas compactas, para que doce meses quepan en una página.
+    if (state.isPrinting) {
+        // Más de un año no cabe a tres columnas sin partirse entre páginas, así
+        // que se compacta a cuatro; las celdas siguen siendo legibles en A4.
+        const printColumns = Math.max(1, Math.min(monthsCount > 12 ? 4 : 3, monthsCount));
+        const printWidthPercent = 100 / printColumns;
+        const printCalendarWidth = containerWidth * (printWidthPercent - 3) / 100;
+        return {
+            columns: printColumns,
+            widthPercent: printWidthPercent,
+            cellWidthPx: Math.max(18, printCalendarWidth / 7 - 2),
+            cellHeightPx: 22,
+            topOffsetPx: 92,
+            gapY: 54,
+            calendarPadPx: 28,
+            monthLabelGapPx: 44,
+            titleFontSize: 20,
+            monthFontSize: 12,
+            dayFontSize: 9
+        };
+    }
+
     let columns;
     let titleFontSize;
     let monthFontSize;
@@ -1367,7 +1410,10 @@ function renderCalendar() {
         });
     }
     // Altura total para el contenedor del chart (para habilitar scroll)
-    const totalHeightPx = currentTopPx + rowMaxHeight + gapY + 40;
+    // Al imprimir no interesa el margen inferior que da aire al hacer scroll:
+    // es espacio muerto que empuja la leyenda y el pie a una segunda página.
+    const bottomPadPx = state.isPrinting ? 16 : gapY + 40;
+    const totalHeightPx = currentTopPx + rowMaxHeight + bottomPadPx;
     container.style.height = `${totalHeightPx}px`;
     container.style.minHeight = `${totalHeightPx}px`;
 
@@ -1871,6 +1917,9 @@ function importData(event) {
 let viewportUpdateTimer = null;
 
 function handleViewportUpdate() {
+    // Durante la impresión el ancho lo fija prepareForPrint, no la ventana
+    if (state.isPrinting) return;
+
     if (!isMobileLayout()) {
         // Al volver a un layout de escritorio el cajón deja de tener sentido
         closeSidebar();

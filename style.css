@@ -1032,20 +1032,39 @@ button {
         height: auto !important;
         overflow: visible;
         padding: 0;
+        background: none !important;
     }
 
     #calendar {
-        width: 100%;
+        width: 100% !important;
         height: auto !important;
         min-height: auto !important;
     }
 
+    /* El lienzo se dibuja con un ancho lógico fijo; aquí se escala al ancho real
+       de la página, que depende del tamaño de papel y de los márgenes.
+       ECharts posiciona el lienzo en absoluto, así que hay que devolverlo al
+       flujo: si no, su contenedor queda con altura cero y la leyenda y el pie
+       se dibujan debajo del calendario en vez de después. */
+    #calendar > div {
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    #calendar canvas {
+        position: static !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+    }
+
     .print-legend {
         display: block;
-        margin-top: 20px;
-        padding: 15px;
+        margin-top: 10px;
+        padding: 10px 0 0;
         border-top: 2px solid #333;
         page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     #legendContent {
@@ -1056,13 +1075,14 @@ button {
 
     .print-footer {
         display: block !important;
-        margin-top: 30px;
-        padding-top: 15px;
+        margin-top: 12px;
+        padding-top: 10px;
         border-top: 1px solid #ccc;
         text-align: center;
-        font-size: 16px;
+        font-size: 12px;
         color: #666;
         page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     .print-footer a {
