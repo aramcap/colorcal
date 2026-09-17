@@ -838,10 +838,6 @@ button {
         min-height: var(--touch-target);
     }
 
-    /* Sin límite de alto la lista ya no necesita desplazarse por sí misma, así
-       que deja de ser contenedor de scroll. Mantener overflow-y: auto junto a
-       overscroll-behavior: contain la convertía en un contenedor de scroll sin
-       recorrido: el gesto táctil no se propagaba al panel y no ocurría nada. */
     .tags-list,
     .periods-list {
         max-height: none;
@@ -899,6 +895,21 @@ button {
 
     .modal-buttons button {
         margin-bottom: 0;
+    }
+}
+
+/* Un contenedor de scroll anidado dentro del panel es frágil con el dedo: el
+   gesto se queda atrapado en la lista, y si además lleva overscroll-behavior:
+   contain tampoco se encadena al panel al llegar al final. En cualquier
+   dispositivo con pantalla táctil las listas dejan de tener scroll propio y se
+   desplaza el panel, que es lo que siempre funciona.
+   any-pointer en lugar de pointer para cubrir también los portátiles táctiles,
+   donde el puntero principal es el ratón pero el dedo está disponible. */
+@media (any-pointer: coarse) {
+    .tags-list,
+    .periods-list {
+        max-height: none;
+        overflow: visible;
     }
 }
 
