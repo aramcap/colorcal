@@ -838,9 +838,14 @@ button {
         min-height: var(--touch-target);
     }
 
+    /* Sin límite de alto la lista ya no necesita desplazarse por sí misma, así
+       que deja de ser contenedor de scroll. Mantener overflow-y: auto junto a
+       overscroll-behavior: contain la convertía en un contenedor de scroll sin
+       recorrido: el gesto táctil no se propagaba al panel y no ocurría nada. */
     .tags-list,
     .periods-list {
         max-height: none;
+        overflow: visible;
     }
 }
 
