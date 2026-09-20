@@ -61,9 +61,10 @@
                 <h3>Etiquetas</h3>
                 <div class="tag-form">
                     <input type="text" id="tagName" placeholder="Nombre etiqueta" aria-label="Nombre de la etiqueta" autocomplete="off" />
-                    <input type="color" id="tagColor" value="#3498db" aria-label="Color de la etiqueta" />
+                    <input type="color" id="tagColor" value="#3498db" aria-label="Color de la etiqueta" title="Se propone un color nuevo tras cada etiqueta; puedes cambiarlo antes de agregar" />
                     <button id="addTag" class="btn-primary">Agregar</button>
                 </div>
+                <span class="count-mode-hint">El color se propone al azar tras cada etiqueta. Cámbialo si quieres otro.</span>
 
                 <div id="tagsList" class="tags-list"></div>
             </div>

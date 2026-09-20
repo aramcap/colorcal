@@ -313,6 +313,86 @@ function formatPeriodCount(period) {
     return total === 1 ? '1 día' : `${total} días`;
 }
 
+// ============================================
+// COLOR ALEATORIO PARA ETIQUETAS NUEVAS
+// ============================================
+
+function hslToHex(hue, saturation, lightness) {
+    const s = saturation / 100;
+    const l = lightness / 100;
+    const k = n => (n + hue / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const canal = n => {
+        const valor = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        return Math.round(255 * valor).toString(16).padStart(2, '0');
+    };
+    return `#${canal(0)}${canal(8)}${canal(4)}`;
+}
+
+// Tono de un color, o null si es un gris (que no aporta tono con el que comparar)
+function hexToHue(hex) {
+    const coincide = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+    if (!coincide) return null;
+
+    const valor = parseInt(coincide[1], 16);
+    const r = ((valor >> 16) & 255) / 255;
+    const g = ((valor >> 8) & 255) / 255;
+    const b = (valor & 255) / 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    if (delta === 0) return null;
+
+    let hue;
+    if (max === r) hue = ((g - b) / delta) % 6;
+    else if (max === g) hue = (b - r) / delta + 2;
+    else hue = (r - g) / delta + 4;
+
+    return (Math.round(hue * 60) + 360) % 360;
+}
+
+// Separación entre dos tonos en la rueda de color, de 0 a 180
+function hueDistance(a, b) {
+    const d = Math.abs(a - b) % 360;
+    return d > 180 ? 360 - d : d;
+}
+
+// Color para la siguiente etiqueta. Se generan varios tonos al azar y se queda
+// el más alejado de los que ya están en uso, para que dos etiquetas no acaben
+// con colores casi iguales. La saturación y la luminosidad van acotadas: en RGB
+// puro salen demasiados colores lavados o casi negros, que se distinguen mal en
+// el calendario.
+function getRandomTagColor() {
+    const usados = state.tags
+        .map(tag => hexToHue(tag.color))
+        .filter(hue => hue !== null);
+
+    let mejorTono = Math.floor(Math.random() * 360);
+    let mejorDistancia = -1;
+
+    for (let i = 0; i < 24; i++) {
+        const tono = Math.floor(Math.random() * 360);
+        const distancia = usados.length
+            ? Math.min(...usados.map(usado => hueDistance(usado, tono)))
+            : 360;
+        if (distancia > mejorDistancia) {
+            mejorDistancia = distancia;
+            mejorTono = tono;
+        }
+    }
+
+    return hslToHex(mejorTono, 55 + Math.floor(Math.random() * 20), 42 + Math.floor(Math.random() * 12));
+}
+
+// Deja el selector preparado con un color nuevo para la siguiente etiqueta
+function refreshTagColorSuggestion() {
+    const colorInput = document.getElementById('tagColor');
+    if (colorInput) {
+        colorInput.value = getRandomTagColor();
+    }
+}
+
 // Función para calcular luminosidad de un color y determinar si el texto debe ser claro u oscuro
 function getContrastColor(hexColor) {
     if (!hexColor) {
@@ -441,6 +521,7 @@ function initializeApp() {
     renderTagsSelect();
     renderPeriodsList();
     renderHolidayLoader();
+    refreshTagColorSuggestion();
     renderCalendar();
 }
 
@@ -703,9 +784,10 @@ function addTag() {
     
     state.tags.push(tag);
     
-    // Limpiar inputs
+    // Limpiar inputs. El color no vuelve al de siempre: se propone uno nuevo
+    // para poder encadenar etiquetas sin pararse a elegirlo cada vez.
     nameInput.value = '';
-    colorInput.value = '#3498db';
+    refreshTagColorSuggestion();
     
     // Actualizar interfaz
     renderTagsList();
