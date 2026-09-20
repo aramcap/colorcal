@@ -1106,7 +1106,7 @@ function getCalendarLayout(containerWidth, monthsCount) {
         return {
             columns: printColumns,
             widthPercent: printWidthPercent,
-            cellWidthPx: Math.max(18, printCalendarWidth / 7 - 2),
+            cellWidthPx: Math.max(18, printCalendarWidth / 7),
             cellHeightPx: 22,
             topOffsetPx: 92,
             gapY: 54,
@@ -1156,7 +1156,9 @@ function getCalendarLayout(containerWidth, monthsCount) {
 
     const widthPercent = 100 / columns;
     const calendarWidthPx = containerWidth * (widthPercent - 3) / 100;
-    const cellWidthPx = Math.max(18, calendarWidthPx / 7 - 2);
+    // Ancho real de celda: ECharts reparte el ancho asignado entre los siete
+    // días, así que hay que usar esa misma división para que las marcas encajen.
+    const cellWidthPx = Math.max(18, calendarWidthPx / 7);
     // A una sola columna las celdas son mucho más anchas: crecen también en alto
     // para no quedar aplastadas y para facilitar la lectura en pantalla pequeña.
     const cellHeightPx = Math.round(
@@ -1200,6 +1202,13 @@ function renderCalendar() {
     const cellHeightPx = layout.cellHeightPx;
     const calendarPadPx = layout.calendarPadPx; // espacio extra para labels de días
     const cellWidthPx = layout.cellWidthPx;
+    // El hueco entre la marca y el borde de la celda tiene que ser proporcional:
+    // 6 px fijos son el 13% de una celda de pantalla pero el 28% de una de
+    // impresión, y ahí la marca se queda pequeña y descuadrada dentro del hueco.
+    const markGapPx = Math.max(2, Math.min(6, cellWidthPx * 0.13));
+    // La cabecera de días también tiene que encoger con la celda: a 12 px fijos,
+    // "Sáb" y "Dom" se solapan en las celdas estrechas de la impresión.
+    const dayLabelFontSize = Math.max(8, Math.min(12, cellWidthPx * 0.42));
 
     state.lastRenderWidth = containerWidth;
     
@@ -1252,6 +1261,7 @@ function renderCalendar() {
                 nameMap: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
                 firstDay: 1,
                 position: 'start',
+                fontSize: dayLabelFontSize,
                 color: themeColors.textSecondary
             },
             monthLabel: {
@@ -1322,7 +1332,7 @@ function renderCalendar() {
                         data: [[item.date, 1]],
                         z: 10 + tagIdx,
                         symbol: 'rect',
-                        symbolSize: [cellWidthPx - 4, stripeH],
+                        symbolSize: [cellWidthPx - markGapPx, stripeH],
                         symbolOffset: [0, offsetY],
                         itemStyle: {
                             color: tag.color,
@@ -1372,7 +1382,7 @@ function renderCalendar() {
                     data: weekendDays.map(d => [d, 1]),
                     z: 5,
                     symbol: 'rect',
-                    symbolSize: [cellWidthPx - 2, cellHeightPx - 2],
+                    symbolSize: [cellWidthPx - markGapPx, cellHeightPx - 2],
                     itemStyle: {
                         color: state.weekendColor
                     },
