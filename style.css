@@ -704,6 +704,15 @@ button {
     cursor: pointer;
 }
 
+.count-mode.is-disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.count-mode.is-disabled input[type="checkbox"] {
+    cursor: default;
+}
+
 .count-mode-hint {
     display: block;
     margin-bottom: 12px;

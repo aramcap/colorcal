@@ -86,11 +86,11 @@
                     <label for="periodLabel">Descripción (opcional):</label>
                     <input type="text" id="periodLabel" placeholder="Ej.: Navidad" autocomplete="off" />
 
-                    <label class="count-mode" for="businessDaysOnly">
+                    <label class="count-mode" id="businessDaysLabel" for="businessDaysOnly">
                         <input type="checkbox" id="businessDaysOnly" />
                         Contar solo días laborables
                     </label>
-                    <span class="count-mode-hint">Excluye sábados, domingos y festivos del período</span>
+                    <span class="count-mode-hint" id="businessDaysHint">Excluye sábados, domingos y festivos del período</span>
 
                     <button id="markRange" class="btn-secondary">Marcar</button>
                 </div>

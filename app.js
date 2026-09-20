@@ -633,6 +633,12 @@ function setupEventListeners() {
         applyTheme(this.value);
     });
     
+    // La casilla de días laborables no aplica a la etiqueta de festivos
+    document.getElementById('selectedTag').addEventListener('change', syncBusinessDaysControl);
+    document.getElementById('businessDaysOnly').addEventListener('change', function() {
+        if (!this.disabled) businessDaysPreference = this.checked;
+    });
+    
     // Festivos oficiales
     document.getElementById('loadHolidays').addEventListener('click', loadOfficialHolidays);
     
@@ -994,6 +1000,35 @@ function renderTagsList() {
     }).join('');
 }
 
+// Los períodos de la etiqueta reservada son siempre naturales, porque en modo
+// laborable se excluirían a sí mismos. Antes la casilla se dejaba marcar y el
+// valor se ignoraba en silencio; ahora se deshabilita y se explica por qué.
+const TEXTO_LABORABLES = 'Excluye sábados, domingos y festivos del período';
+
+// Se recuerda lo que el usuario tenía marcado para restaurarlo al volver a una
+// etiqueta normal, en vez de desmarcárselo sin avisar.
+let businessDaysPreference = false;
+
+function syncBusinessDaysControl() {
+    const checkbox = document.getElementById('businessDaysOnly');
+    const label = document.getElementById('businessDaysLabel');
+    const hint = document.getElementById('businessDaysHint');
+    const select = document.getElementById('selectedTag');
+    if (!checkbox || !select) return;
+
+    const esFestivo = isHolidayTag(select.value);
+
+    checkbox.disabled = esFestivo;
+    checkbox.checked = esFestivo ? false : businessDaysPreference;
+
+    if (label) label.classList.toggle('is-disabled', esFestivo);
+    if (hint) {
+        hint.textContent = esFestivo
+            ? `Los períodos de "${HOLIDAY_TAG_NAME}" cuentan siempre en días naturales`
+            : TEXTO_LABORABLES;
+    }
+}
+
 function renderTagsSelect() {
     const select = document.getElementById('selectedTag');
     
@@ -1006,6 +1041,8 @@ function renderTagsSelect() {
         getSortedTags().map(tag => `
             <option value="${tag.id}">${escapeHtml(tag.name)}</option>
         `).join('');
+
+    syncBusinessDaysControl();
 }
 
 // Marcar días
