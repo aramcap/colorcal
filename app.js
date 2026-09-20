@@ -1072,7 +1072,12 @@ function getSafeDevicePixelRatio(widthPx, heightPx) {
 // La densidad de píxeles solo puede fijarse al crear la instancia, así que
 // recreamos el chart cuando el tamaño del lienzo obliga a cambiarla.
 function ensureChart(container, widthPx, heightPx) {
-    const dpr = getSafeDevicePixelRatio(widthPx, heightPx);
+    // Al imprimir se fija una densidad estable: si cambiara respecto a la de
+    // pantalla habría que destruir y recrear el gráfico en pleno beforeprint,
+    // que es justo cuando menos margen hay para repintarlo.
+    const dpr = state.isPrinting
+        ? Math.min(2, getSafeDevicePixelRatio(widthPx, heightPx))
+        : getSafeDevicePixelRatio(widthPx, heightPx);
 
     if (state.chart && Math.abs((state.chartPixelRatio || 0) - dpr) > 0.05) {
         state.chart.dispose();
@@ -1437,6 +1442,15 @@ function renderCalendar() {
     
     state.chart.setOption(option, true);
     state.chart.resize();
+
+    // ECharts pinta en el siguiente fotograma. Al imprimir eso no vale: el
+    // navegador puede capturar la página antes, y el lienzo saldría con las
+    // dimensiones nuevas y el dibujo anterior, o recién creado y aún vacío si
+    // ensureChart tuvo que recrearlo. flush() fuerza el pintado ahora.
+    const zr = state.chart.getZr && state.chart.getZr();
+    if (zr && typeof zr.flush === 'function') {
+        zr.flush();
+    }
 }
 
 // Devuelve todas las fechas (YYYY-MM-DD) de un mes
